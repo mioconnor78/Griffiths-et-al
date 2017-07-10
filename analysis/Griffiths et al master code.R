@@ -15,7 +15,7 @@ library(stringr)
 ### load data
 smith.bio <- read_csv("./data/Smith.csv")
 compare <- read.csv("./data/choked_seagrass_smithora.csv")
-ang <- read.csv("./data/macrophyte.biomass.zeros.csv")
+ang <- read.csv("./data/macrophyte_biomass_zeros_20170709.csv")
 sites <- read.csv("./data/choked_sites.csv")
 
 ### compare
@@ -50,7 +50,7 @@ ang <- ang2 %>%
   
 ang3 <- ang %>%  
   spread(macrophyte, final_dry_g) %>% 
-  group_by(uniqueID) %>%
+  group_by(uniqueID) 
   
 ang4 <- ang3 %>%
   summarise_each(funs(first))
