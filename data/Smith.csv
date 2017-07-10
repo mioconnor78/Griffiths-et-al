@@ -1,0 +1,20 @@
+Type,Source,biomass
+ambient ,edge,0.455813953
+ambient ,edge,0.247191011
+ambient ,inner,0
+ambient ,inner,0
+control,inner,0
+control,inner,0
+control,inner,0
+control,edge,0.371900826
+control,edge,0.272
+control,edge,0.804597701
+experiment,inner,0.578512397
+experiment,inner,0.464646465
+experiment,inner,0.256281407
+experiment,edge,0.282608696
+experiment,edge,0.151162791
+experiment,edge,0.166666667
+control,inner,0
+control,edge,0.490196078
+control,edge,0.804347826
