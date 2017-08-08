@@ -15,7 +15,7 @@ library(stringr)
 ### load data
 smith.bio <- read_csv("./data/Smith.csv")
 compare <- read.csv("./data/choked_seagrass_smithora.csv")
-ang <- read.csv("./data/macrophyte_biomass_zeros_20170709.csv")
+ang <- read.csv("./data/macrophyte_biomass_zeros_20170709.csv", stringsAsFactors=F)
 sites <- read.csv("./data/choked_sites.csv")
 
 ### compare
@@ -47,13 +47,16 @@ ang <- ang2 %>%
   mutate(uniqueID2 = paste(uniqueID, final_dry_g, sep = ".")) %>%
   filter(uniqueID2 != "29-May.alcove.38.0.1") %>%
   select(-uniqueID2)
+
+ang.smith <- subset(ang, ang$macrophyte %in% "smithora")
+ang.zostera<- subset(ang, ang$macrophyte %in% "zostera")
+
+ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","date", "site", "distance_m"))
+ang5 <- ang4[,c("site", "date", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
+ang5$ratio <- ang5$final_dry_g.x / ang5$final_dry_g.y
+ang5$date <- as.Date(ang5$date, format="%d-%b")
   
-ang3 <- ang %>%  
-  spread(macrophyte, final_dry_g) %>% 
-  group_by(uniqueID) 
-  
-ang4 <- ang3 %>%
-  summarise_each(funs(first))
+
 
 #### Monitoring data
 ## started with our data, but there isn't an inner site here, really...
