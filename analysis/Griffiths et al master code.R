@@ -38,7 +38,7 @@ compare_edge2$site[compare_edge$site == "choked_inner_wolf"] <- "Interior"
 ang2 <- merge(ang, sites, by.x = "site", by.y = "name2")
 ## this next bit selects the sites we want, and removes a couple of rows that appeared to be duplicates, zeros, or unclearly assigned to a shoot. 
 ang <- ang2 %>%
-  filter(group != "kelp") %>%
+  filter(group.x != "kelp") %>%
   select(-c(notes, oven_date, QAQC_date,QAQC_Initials, Lat, Long, foil_wgt_g, wet_wgt_g, dry_wgt_g)) %>%
   mutate(uniqueID = paste(date, site, blade_sample_id, sep = ".")) %>%
   filter(final_dry_g != "0") %>%
@@ -52,11 +52,24 @@ ang.smith <- subset(ang, ang$macrophyte %in% "smithora")
 ang.zostera<- subset(ang, ang$macrophyte %in% "zostera")
 
 ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","date", "site", "distance_m"))
-ang5 <- ang4[,c("site", "date", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
+ang5 <- ang4[,c("site", "group.y", "date", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
 ang5$ratio <- ang5$final_dry_g.x / ang5$final_dry_g.y
 ang5$date <- as.Date(ang5$date, format="%d-%b")
-  
 
+### Figure 1C: Smithora load in edge v interior sites  
+smith.load <- ggplot(ang5, aes(x = group.y, y = ratio)) + 
+  geom_point(size = 6, colour = "gray") +
+  geom_boxplot(size = 1, fill = "transparent") + 
+  scale_y_continuous(name = "Smithora (g dwt) / Zostera (g dwt)", limits = c(0, 4)) +
+  theme_bw() + 
+  theme(panel.grid = element_blank()) + 
+  xlab(expression("Location")) + 
+  geom_text(label = "C", x = 2.4, y = 4) +
+  geom_text(label = "C", x = 2.4, y = 4) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = -1, size = 12))
+
+ggsave("smith.load.ang.jpg", plot = shoot.dwt, width = 3, height = 3)
 
 #### Monitoring data
 ## started with our data, but there isn't an inner site here, really...
