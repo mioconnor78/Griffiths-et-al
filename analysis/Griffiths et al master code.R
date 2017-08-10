@@ -55,10 +55,18 @@ ang <- ang2 %>%
 ang.smith <- subset(ang, ang$macrophyte %in% "smithora")
 ang.zostera<- subset(ang, ang$macrophyte %in% "zostera")
 
-ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","date", "site", "distance_m"))
+ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","date", "site", "distance_m"), all = TRUE)
 ang5 <- ang4[,c("site", "group.y", "date", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
+ang5 <- ang4 %>%
+  select(c(site, group.y, date, blade_sample_id, distance_m, macrophyte.x,final_dry_g.x, macrophyte.y, final_dry_g.y)) %>%
+  filter(macrophyte.y == "zostera") %>%
+  replace_na(list(macrophyte.x = "smithora", final_dry_g.x = "0")) %>%
+  mutate(ratio = as.numeric(final_dry_g.x) / final_dry_g.y)
+
 ang5$ratio <- ang5$final_dry_g.x / ang5$final_dry_g.y
 ang5$date <- as.Date(ang5$date, format="%d-%b")
+
+summary<-ddply(ang5, .(site, date), summarise, length((ratio)))
 
 ### Figure 1C: Smithora load in edge v interior sites  
 smith.load <- ggplot(ang5, aes(x = group.y, y = ratio)) + 
@@ -74,6 +82,13 @@ smith.load <- ggplot(ang5, aes(x = group.y, y = ratio)) +
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 
 ggsave("smith.load.ang.jpg", plot = smith.load, width = 3, height = 3)
+
+hist(log(ang5$ratio+0.01))
+mod1 <- glm(ang5$ratio ~ ang5$group.y, family = quasipoisson)  ## should probably be done with site as a ranef...
+
+mean(ang5[(ang5$site == "wolf"),]$ratio)
+mean(ang5[(ang5$site == "inner ang"),]$ratio)
+
 
 #### Monitoring data
 ## started with our data, but there isn't an inner site here, really...
@@ -101,7 +116,7 @@ sm.zm
 
 ## FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
 
-## A) Shoot density
+## A) Shoot density (moved to appendix)
 shoot.density <- ggplot(compare_edge2, aes(x = site, y = number.shoots.quadrat)) + 
   geom_point(size = 6, colour = "gray") +
   geom_boxplot(size = 1, fill = "transparent") + 
@@ -115,7 +130,7 @@ shoot.density <- ggplot(compare_edge2, aes(x = site, y = number.shoots.quadrat))
 
 ggsave("shoot.density.jpg", plot = shoot.density, width = 3, height = 3)
 
-## B) Zostera above ground biomass (dry weight)
+## A) Zostera above ground biomass (dry weight)
 shoot.dwt <- ggplot(compare_edge2, aes(x = site, y = total.dry.macro.weight)) + 
   geom_point(size = 6, colour = "gray") +
   geom_boxplot(size = 1, fill = "transparent") + 
@@ -123,14 +138,14 @@ shoot.dwt <- ggplot(compare_edge2, aes(x = site, y = total.dry.macro.weight)) +
   theme_bw() + 
   theme(panel.grid = element_blank()) + 
   xlab(expression("Location")) + 
-  geom_text(label = "B", x = 2.4, y = 30) +
+  geom_text(label = "A", x = 2.4, y = 30) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 
 ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 3, height = 3)
 
 
-## C) Zostera above ground biomass (dry weight)
+## B) Zostera above ground biomass (dry weight)
 smithora <- ggplot(compare_edge2, aes(x = site, y = macroepiphyte.weight/total.dry.macro.weight)) + 
   geom_point(size = 6, colour = "gray") +
   geom_boxplot(size = 1, fill = "transparent") + 
@@ -138,7 +153,7 @@ smithora <- ggplot(compare_edge2, aes(x = site, y = macroepiphyte.weight/total.d
   theme_bw() + 
   theme(panel.grid = element_blank()) + 
   xlab(expression("Location")) + 
-  geom_text(label = "C", x = 2.4, y = 0.5) +
+  geom_text(label = "B", x = 2.4, y = 0.5) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 
@@ -172,11 +187,11 @@ grazers <- ggplot(grazers5, aes(x = Source, y = Abundance)) +
   theme_bw() + 
   theme(panel.grid = element_blank()) + 
   xlab(expression("Location")) + 
-  geom_text(label = "D", x = 2.4, y = 650) +
+  geom_text(label = "C", x = 2.4, y = 650) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 
-ggsave("grazers.jpg", plot = smithora, width = 3, height = 3)
+ggsave("grazers.jpg", plot = grazers, width = 3, height = 3)
 
 ## now once we know the treatments for each plot, we can plot total abundance
 
