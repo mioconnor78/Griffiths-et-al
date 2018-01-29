@@ -1,0 +1,20 @@
+Notes Gwen: 
+
+Data was clustered into operational taxonomic units (OTUs) with the minimum entropy decomposition (MED), which allows underlying structure in the data to  nodes at m -250.  Filtered to remove mitochondria, chloroplasts, OTUs unassigned at the domain level, and OTUs with fewer than 500 sequences. 
+Samples with fewer than 1000 sequences were removed from the analysis. 
+Data rarefied to 7100 sequences per sample for diversity analyses. 
+Bray Curtis dissimilarity index used to assess community composition and was calculated in QIIME v 1.9 (Caporaso et al. 2010). 
+seqs per sample range from  7177 - 45672;  Mean: 27563.  
+Total Num samples: 27
+Total Num OTUs: 311
+Total seqs: 744214
+
+NMDS plots, PERMANOVA and PERMDISP analyses were conducted in Primer E (Clarke 2006). 
+
+At the beginning of the experiment in July (July 10th) blades from the edge of the meadow all had Smithora, while none of the blades from the interior had Smithora (reflecting the distribution of Smithora generally). Microbial community composition was highly differentiated between the edge and interior as well (NMDS_before_smithora; PERMANOVA for site/Smithora presence p=0.006, pseudo-F=8.166, df=1). Dispersion was not different (PERMDISP p=0.545). Microbial richness was significantly higher in the interior of the meadow (without Smithora) than in the interior (t-test on Chao1 p=.0005). 
+
+
+Transplanted blades were collected one month later on August 9th. The general pattern of Smithora being present on the meadow edge, but not the interior was maintained at this time. All of the blades that were from the edge and originally had Smithora retained Smithora, even those that were transplanted to the generally Smithora-free interior of the meadow. Blades that originated from the meadow interior and were transplanted to the interior remained Smithora-free. However, interior blades transplanted ot the meadow edge were all colonized by Smithora. At this time we also collected two ambient blades from the interior of meadow (which did not have Smithora) and two from the meadow edge, which were colonized by Smithora. Blades with Smithora harbor significantly different communities that blades without (NMDS_after_smithora and NMDS_after_by_treatment;PERMANOVA for Smithora presence p=0.027, pseudo-F=2.03,df=1), but dispersion was not different (PERMDISP p=0.441). There is no significant difference in blade communities by origin of blades (NMDS_after_by_treatment; PERMANOVA for start location p=0.583,pseudo-F=0.800,df=1) or by destination (PERMANOVA for destination  p=0.573,pseudo-F=0.94, df=1). All August comparisons include ambient samples. Microbial richness at the August time point was not significantly different on blades with or without Smithora (t-test p=.59) or by destination location (t-test p=0.60), or starting location (t-test p = .664). 
+
+Microbial community composition shifted from July to August (NMDS_before_after; PERMANOVA for date p=0.001, pseudo-F=4.818, df=1). This is unlikely to be a result of the transplant itself because the ambient samples from August group solidly within the August transplant samples. [Is there info on changes in water temp etc that might have driven changes? if so cite here. in not no big deal]. 
+
