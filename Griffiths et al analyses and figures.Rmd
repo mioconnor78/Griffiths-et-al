@@ -75,18 +75,20 @@ ang <- ang2 %>%
 ang.smith <- subset(ang, ang$macrophyte %in% "smithora")
 ang.zostera<- subset(ang, ang$macrophyte %in% "zostera")
 
-ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","date", "site", "distance_m"), all = TRUE)
-ang5 <- ang4[,c("site", "group.y", "date", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
+ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","sample_time", "site", "distance_m"), all = TRUE)
+ang5 <- ang4[,c("site", "group.y", "sample_time", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
 ang5 <- ang4 %>%
-  select(c(site, group.y, date, blade_sample_id, distance_m, macrophyte.x,final_dry_g.x, macrophyte.y, final_dry_g.y)) %>%
+  select(c(site, group.y, sample_time, blade_sample_id, distance_m, macrophyte.x,final_dry_g.x, macrophyte.y, final_dry_g.y)) %>%
   filter(macrophyte.y == "zostera") %>%
   replace_na(list(macrophyte.x = "smithora", final_dry_g.x = "0")) %>%
   mutate(ratio = as.numeric(final_dry_g.x) / final_dry_g.y)
 
 ang5$ratio <- as.numeric(ang5$final_dry_g.x) / as.numeric(ang5$final_dry_g.y)
-ang5$date <- as.Date(ang5$date, format="%d-%b")
+#ang5$date <- as.Date(ang5$date, format="%d-%b")
 
-summary<-ddply(ang5, .(site, date), summarise, length((ratio)))
+summary<-ddply(ang5, .(site, sample_time, group.y), summarise, min((ratio)))
+
+site.summary<-ddply(ang5, .(site, sample_time, group.y), summarise, length(distance_m))
 #hist(log(ang5$ratio))
 ```
 
@@ -110,6 +112,24 @@ ggsave("smith.load.ang.jpg", plot = smith.load, width = 3, height = 3)
 Analysis
 ```{r}
 #hist(log(ang5$ratio+0.01))
+## august 2019: we have 4-5 samples on a transect; transects were not permanenet, but sample a site. each site was sampled 3 times. sites are either 'interior' or 'edge'. check variation at sites by date. it's looking like not much variation among inner vs edge sites; check a model for that, pooled over time?
+
+smith.load.date <- ggplot(ang5, aes(x = group.y, y = ratio, group_by(sample_time))) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Smithora (g dwt) / Zostera (g dwt)", limits = c(-0.15, 4), breaks = c(0,1,2,3,4), labels = c(0,1,2,3,4)) + 
+  theme_bw() + 
+  facet_grid(cols = vars(sample_time), rows = vars(site)) +
+  theme(panel.grid = element_blank()) + 
+  xlab(expression("Location")) + 
+  geom_text(label = "C", x = 2.4, y = 4) +
+  geom_text(label = "C", x = 2.4, y = 4) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = -1, size = 12))
+smith.load.date
+```
+
+```{r}
 mod1 <- glm(ang5$ratio ~ ang5$group.y, family = quasipoisson) ## should probably be done with site as a ranef...
 
 ang5$site <- as.factor(ang5$site)
