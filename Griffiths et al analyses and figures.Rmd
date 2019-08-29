@@ -85,8 +85,9 @@ ang5 <- ang4 %>%
 
 ang5$ratio <- as.numeric(ang5$final_dry_g.x) / as.numeric(ang5$final_dry_g.y)
 #ang5$date <- as.Date(ang5$date, format="%d-%b")
+ang5$logratio <- log(ang5$ratio + 0.1)
 
-summary<-ddply(ang5, .(site, sample_time, group.y), summarise, min((ratio)))
+summary<-ddply(ang5, .(site, sample_time, group.y), summarise, min(logratio))
 
 site.summary<-ddply(ang5, .(site, sample_time, group.y), summarise, length(distance_m))
 #hist(log(ang5$ratio))
@@ -112,32 +113,34 @@ ggsave("smith.load.ang.jpg", plot = smith.load, width = 3, height = 3)
 Analysis
 ```{r}
 #hist(log(ang5$ratio+0.01))
-## august 2019: we have 4-5 samples on a transect; transects were not permanenet, but sample a site. each site was sampled 3 times. sites are either 'interior' or 'edge'. check variation at sites by date. it's looking like not much variation among inner vs edge sites; check a model for that, pooled over time?
+## august 2019: we have 4-5 samples on a transect; transects were not permanenet, but sample a site. i just realized i have to nest the shoots within transects! need to redo models below.
 
-smith.load.date <- ggplot(ang5, aes(x = group.y, y = ratio, group_by(sample_time))) + 
+smith.load.date <- ggplot(ang5, aes(x = sample_time, y = logratio, group_by(group.y))) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Smithora (g dwt) / Zostera (g dwt)", limits = c(-0.15, 4), breaks = c(0,1,2,3,4), labels = c(0,1,2,3,4)) + 
+  #geom_point() +
+  scale_y_continuous(name = "log(Smithora (g dwt) / Zostera (g dwt))", limits = c(-2.5, 1.5), breaks = c(-2.5,-2, -1.5,-1,-0.5,0,0.5,1,1.5), labels = c(-2.5,-2, -1.5,-1,-0.5,0,0.5,1,1.5)) + 
   theme_bw() + 
-  facet_grid(cols = vars(sample_time), rows = vars(site)) +
+  facet_grid(cols = vars(group.y)) +
   theme(panel.grid = element_blank()) + 
-  xlab(expression("Location")) + 
-  geom_text(label = "C", x = 2.4, y = 4) +
-  geom_text(label = "C", x = 2.4, y = 4) +
+  xlab(expression("Sample period")) + 
+ # geom_text(label = "C", x = 2.4, y = 4) +
+ # geom_text(label = "C", x = 2.4, y = 4) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 smith.load.date
+ggsave("smith.load.date.jpg", plot = smith.load.date, width = 6, height = 3)
 ```
 
 ```{r}
-mod1 <- glm(ang5$ratio ~ ang5$group.y, family = quasipoisson) ## should probably be done with site as a ranef...
+#mod1 <- glm(ang5$ratio ~ ang5$group.y, family = quasipoisson) ## should probably be done with site as a ranef...
 
 ang5$site <- as.factor(ang5$site)
-mod3 <- lme(I(log(ratio+0.01)) ~ group.y, random = ~1|site, data = ang5)
-mod3.1 <- lm(I(log(ratio+0.01)) ~ group.y, data = ang5)
-
-mod3.2 <- lm(I(log(ratio+0.01)) ~ group.y*site, data = ang5)
-model.sel(mod3.1, mod3.2)
+mod0 <- lme(I(log(ratio+0.01)) ~ group.y*sample_time, method = "ML", random = ~1|site, data = ang5)
+mod1 <- lme(I(log(ratio+0.01)) ~ sample_time, method = "ML", random = ~1|site, data = ang5)
+mod3 <- lme(I(log(ratio+0.01)) ~ group.y, method = "ML", random = ~1|site, data = ang5)
+mod2 <- lme(I(log(ratio+0.01)) ~ 1,  method = "ML", random = ~1|site, data = ang5)
+model.sel(mod0, mod1, mod2, mod3)
 
 mean(ang5[(ang5$site == "wolf"),]$ratio)
 mean(ang5[(ang5$site == "inner ang"),]$ratio)
