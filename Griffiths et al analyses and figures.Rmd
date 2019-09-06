@@ -15,10 +15,19 @@ library(stringr)
 library(nlme)
 library(MuMIn)
 library(knitr)
+library(captioner)
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ## R Markdown
+
+```{r captions, echo = FALSE}
+table_nums <- captioner::captioner(prefix = "Table. ") #sets prefix for all tables
+table_nums(name = "Table_2", caption = "Model selection results: Survey.", display = FALSE)
+
+fig_nums <- captioner::captioner(prefix = "Figure.")
+fig_nums(name = "Fig_1C", caption = "Smithora load at Eight sites in Choked Pass", display = FALSE)
+```
 
 ```{r, echo=FALSE}
 ## load data
@@ -40,7 +49,7 @@ compare_edge <- bind_rows(inner,edge)
 
 ###Making data nicer for plotting
 head(compare)
-View(compare)
+#View(compare)
 compare_edge2 <- compare_edge
 compare_edge2$site <- as.character(compare_edge2$site)
 compare_edge2$site[compare_edge$site == "choked_edge_wolf"] <- "Edge"
@@ -87,6 +96,20 @@ ang5$ratio <- as.numeric(ang5$final_dry_g.x) / as.numeric(ang5$final_dry_g.y)
 #ang5$date <- as.Date(ang5$date, format="%d-%b")
 ang5$logratio <- log(ang5$ratio + 0.1)
 
+class(ang5$group.y)
+
+levels(ang5$group.y)[levels(ang5$group.y == "edge")] <- "Edge Sites"
+levels(ang5$group.y)[levels(ang5$group.y == "inner")] <- "Interior Sites"
+
+levels(ang5$site)[levels(ang5$site == "inner sandspit")] <- "IS"
+levels(ang5$site)[levels(ang5$site == "outer sandspit")] <- "OS"
+levels(ang5$site)[levels(ang5$site == "inner tristan")] <- "IT"
+levels(ang5$site)[levels(ang5$site == "inner ang")] <- "IA"
+levels(ang5$site)[levels(ang5$site == "wolf")] <- "WF"
+levels(ang5$site)[levels(ang5$site == "inner derek")] <- "ID"
+levels(ang5$site)[levels(ang5$site == "alcove")] <- "AL"
+levels(ang5$site)[levels(ang5$site == "inner carolyn")] <- "IC"
+
 summary<-ddply(ang5, .(site, sample_time, group.y), summarise, min(logratio))
 
 site.summary<-ddply(ang5, .(site, sample_time, group.y), summarise, length(distance_m))
@@ -111,40 +134,56 @@ ggsave("smith.load.ang.jpg", plot = smith.load, width = 3, height = 3)
 ```
 
 Analysis
-```{r}
-#hist(log(ang5$ratio+0.01))
-## august 2019: we have 4-5 samples on a transect; transects were not permanenet, but sample a site. i just realized i have to nest the shoots within transects! need to redo models below.
-
-smith.load.date <- ggplot(ang5, aes(x = sample_time, y = logratio, group_by(group.y))) + 
-  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  #geom_point() +
-  scale_y_continuous(name = "log(Smithora (g dwt) / Zostera (g dwt))", limits = c(-2.5, 1.5), breaks = c(-2.5,-2, -1.5,-1,-0.5,0,0.5,1,1.5), labels = c(-2.5,-2, -1.5,-1,-0.5,0,0.5,1,1.5)) + 
-  theme_bw() + 
-  facet_grid(cols = vars(group.y)) +
-  theme(panel.grid = element_blank()) + 
-  xlab(expression("Sample period")) + 
- # geom_text(label = "C", x = 2.4, y = 4) +
- # geom_text(label = "C", x = 2.4, y = 4) +
-  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = -1, size = 12))
-smith.load.date
-ggsave("smith.load.date.jpg", plot = smith.load.date, width = 6, height = 3)
-```
 
 ```{r}
-#mod1 <- glm(ang5$ratio ~ ang5$group.y, family = quasipoisson) ## should probably be done with site as a ranef...
-
+# model selection for smithora load
 ang5$site <- as.factor(ang5$site)
 mod0 <- lme(I(log(ratio+0.01)) ~ group.y*sample_time, method = "ML", random = ~1|site, data = ang5)
 mod1 <- lme(I(log(ratio+0.01)) ~ sample_time, method = "ML", random = ~1|site, data = ang5)
 mod3 <- lme(I(log(ratio+0.01)) ~ group.y, method = "ML", random = ~1|site, data = ang5)
 mod2 <- lme(I(log(ratio+0.01)) ~ 1,  method = "ML", random = ~1|site, data = ang5)
-model.sel(mod0, mod1, mod2, mod3)
+mod4 <- lme(I(log(ratio+0.01)) ~ group.y*sample_time, method = "ML", random = ~1 + sample_time|site, data = ang5)
+smithora.summary <- model.sel(mod0, mod1, mod2, mod3, mod4)
 
 mean(ang5[(ang5$site == "wolf"),]$ratio)
 mean(ang5[(ang5$site == "inner ang"),]$ratio)
+
+mod4pr <- as.data.frame(predict(mod4))
+colnames(mod4pr) <- c("mod4pr")
+ang5$m4ratio <- exp(mod4pr)
+
 ```
+
+`r fig_nums("Fig_1C")`
+
+```{r Fig_1C Smith Load, fig.width=6, fig.height=3}
+#hist(log(ang5$ratio+0.01))
+## working on plotting raw data with backtransformed modeled coefficients for site, connecting lines by time.
+## add code for more shape values
+
+smith.load.date <- ggplot(ang5, aes(x = factor(sample_time), y = ratio, group_by(group.y), shape = site)) + 
+  geom_jitter(position = position_jitter(width=.2), colour = "grey75", size=2) +
+  #stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "log(Smithora (g dwt) / Zostera (g dwt))", limits = c(0, 4), breaks = c(0,1,2,3,4), labels = c(0,1,2,3,4)) + 
+  guides(size = FALSE) +
+  scale_shape_manual(guide = guide_legend(title = "Site"), values = c(1,2,22,23,8,15,16,17)) +
+  scale_x_discrete(labels = c("May", "June", "Aug")) +
+  geom_point(ang5, mapping = aes(sample_time, m4ratio$mod4pr, size = 2)) +
+  theme_bw() + 
+  theme(legend.key = element_rect(fill = NA), 
+        axis.text = element_text(size = 8)) +
+  facet_grid(cols = vars(group.y)) +
+  theme(panel.grid = element_blank()) + 
+  xlab(expression(" ")) + 
+ # geom_text(label = "C", x = 2.4, y = 4) +
+  theme(axis.title.x = element_text(vjust = -1, size = 10)) + 
+  theme(axis.title.y = element_text(vjust = 3, size = 10))
+smith.load.date
+
+ggsave("Fig1C.smithload.jpg", plot = smith.load.date, width = 6, height = 3)
+```
+
+
 
 Monitoring data
 (started with our data, but there isn't an inner site here, really...)
@@ -152,7 +191,7 @@ Monitoring data
 ```{r}
 shoots2015 <- read.csv("./data/biodiversitysurvey.2015.eelgrass.single.shoots.monitoring.csv")
 shoots2015$site_id <- revalue(shoots2015$site, c("goose_east"="GsE", "goose_west"="GsW", "mcmullins_north" = "MMn", "mcmullins_south" = "MMs", "triquet_south" = "TqS", "triquet_north"= "TqN", "choked_south_pigu" = "Cspg", "choked_sandspit" = "Csan"))
-View(shoots2015)
+#View(shoots2015)
 
 shoots <- shoots2015 %>%
   filter(site_id %in% c("Csan", "Cspg")) %>%
@@ -171,6 +210,15 @@ sm.zm <- ggplot(shoots, aes(x = site_id, y = sm.zm)) +
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 sm.zm
 ```
+
+## Survey model results
+`r table_nums("Table_S1.1")`
+
+```{r Table_1, echo = FALSE}
+kable(survey.mods, digits=2, align = 'c', col.names = c('Int','Zone','Date','Zone*Date', 'df', 'logLik','AICc','d','w'))
+```
+
+
 FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
 A) Shoot density (moved to supplementary material)
 ```{r}
