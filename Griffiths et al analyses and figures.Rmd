@@ -12,7 +12,7 @@ library(dplyr)
 library(reshape2)
 library(plyr)
 library(stringr)
-library(nlme)
+#library(nlme)
 library(MuMIn)
 library(knitr)
 library(captioner)
@@ -96,19 +96,11 @@ ang5$ratio <- as.numeric(ang5$final_dry_g.x) / as.numeric(ang5$final_dry_g.y)
 #ang5$date <- as.Date(ang5$date, format="%d-%b")
 ang5$logratio <- log(ang5$ratio + 0.1)
 
-class(ang5$group.y)
+ang5$non_zero <- ifelse(ang5$ratio > 0, 1, 0)
 
-levels(ang5$group.y)[levels(ang5$group.y == "edge")] <- "Edge Sites"
-levels(ang5$group.y)[levels(ang5$group.y == "inner")] <- "Interior Sites"
+ang5$group.y <- revalue(ang5$group.y, c(edge = "Edge Sites", inner ="Interior Sites"))
+ang5$site <- revalue(ang5$site, c("inner sandspit" = "IS", "outer sandspit" = "OS","inner tristan" = "IT", "inner ang" = "IA", "wolf" = "WF", "inner derek" = "ID", "alcove" = "AL", "inner carolyn" = "IC"))
 
-levels(ang5$site)[levels(ang5$site == "inner sandspit")] <- "IS"
-levels(ang5$site)[levels(ang5$site == "outer sandspit")] <- "OS"
-levels(ang5$site)[levels(ang5$site == "inner tristan")] <- "IT"
-levels(ang5$site)[levels(ang5$site == "inner ang")] <- "IA"
-levels(ang5$site)[levels(ang5$site == "wolf")] <- "WF"
-levels(ang5$site)[levels(ang5$site == "inner derek")] <- "ID"
-levels(ang5$site)[levels(ang5$site == "alcove")] <- "AL"
-levels(ang5$site)[levels(ang5$site == "inner carolyn")] <- "IC"
 
 summary<-ddply(ang5, .(site, sample_time, group.y), summarise, min(logratio))
 
@@ -137,6 +129,39 @@ Analysis
 
 ```{r}
 # model selection for smithora load
+shapiro.test(ang5$logratio+0.01)
+hist(ang5$logratio)
+hist(ang5$ratio, breaks = 80)
+
+#gamma hurdle models; this makes sense, but i'm flying solo on the random effects part.
+# #gamma hurdle models; this makes sense, but i'm flying solo on the random effects part.
+m1 <- glm(non_zero ~ group.y*sample_time, data = ang5, family = binomial(link = logit))
+m2 <- glm(ratio ~ group.y*sample_time, data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+
+(bin_coef <- plogis(coef(m1)[[1]]))
+(gamma_coef <- exp(coef(m2)[[1]]))
+(plogis(confint(m1)))
+(exp(confint(m2)))
+
+
+# this works too: See Sean Anderson's blog for interpretation. but this is i think the right way to go with the analyses; and will just take a bit more to plot the right estimates back on the figure but i'm close. 
+library(lme4)
+m1a <- glmer(non_zero ~ group.y*sample_time + (1|site), family = binomial(link = logit), verbose = 1, data = ang5)
+m2a <- glmer(ratio ~ group.y*sample_time+ (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+
+coef1a <- as.data.frame(coef(m1a)$site[1:8, 1:4])
+(bin_coef <- plogis(coef1a)) #make these values numeric
+(gamma_coef <- exp(coef(m2a)$site[1:8, 1:4]))
+(plogis(confint(m1)))
+(exp(confint(m2)))
+
+#detach('package:nlme', unload = TRUE)
+
+mod0 <- glmer(ratio ~ group.y*sample_time + (1|site), family = gamma, REML = FALSE, verbose = 1, data = ang5)
+```
+
+```{r}
+#older analysis on log trasnformed data
 ang5$site <- as.factor(ang5$site)
 mod0 <- lme(I(log(ratio+0.01)) ~ group.y*sample_time, method = "ML", random = ~1|site, data = ang5)
 mod1 <- lme(I(log(ratio+0.01)) ~ sample_time, method = "ML", random = ~1|site, data = ang5)
@@ -144,9 +169,6 @@ mod3 <- lme(I(log(ratio+0.01)) ~ group.y, method = "ML", random = ~1|site, data 
 mod2 <- lme(I(log(ratio+0.01)) ~ 1,  method = "ML", random = ~1|site, data = ang5)
 mod4 <- lme(I(log(ratio+0.01)) ~ group.y*sample_time, method = "ML", random = ~1 + sample_time|site, data = ang5)
 smithora.summary <- model.sel(mod0, mod1, mod2, mod3, mod4)
-
-mean(ang5[(ang5$site == "wolf"),]$ratio)
-mean(ang5[(ang5$site == "inner ang"),]$ratio)
 
 mod4pr <- as.data.frame(predict(mod4))
 colnames(mod4pr) <- c("mod4pr")
