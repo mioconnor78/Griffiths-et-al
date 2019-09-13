@@ -44,7 +44,7 @@ inner <- filter(compare, site == "choked_inner_wolf")
 compare_edge <- bind_rows(inner,edge)
 
 ###Making data nicer for plotting
-head(compare)
+#head(compare)
 #View(compare)
 compare_edge2 <- compare_edge
 compare_edge2$site <- as.character(compare_edge2$site)

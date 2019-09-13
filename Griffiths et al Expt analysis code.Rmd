@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ```{r, echo=FALSE}
 ## load data
-smith.bio <- read.csv("./data/Smith.csv")
+smith.bio <- read.csv("./data/Smith.csv") # from experiment
 compare <- read.csv("./data/choked_seagrass_smithora.csv")
 sites <- read.csv("./data/choked_sites.csv")
 smith.expt <- read.csv("./data/Transplant_raw_smithora_wt.csv")
@@ -29,9 +29,39 @@ grazertraits <- read.csv("./data/grazertraitsmaster.csv")
 grazers <- read.csv("./data/Grazers_EdgeVSInterior_V1_Aug09_2017.csv")
 ```
 
+```{r}
+### compare
+## from meadow surveys, identify edge and inner samples
+edge <- filter(compare, site == "choked_edge_wolf")
+inner <- filter(compare, site == "choked_inner_wolf")
+compare_edge <- bind_rows(inner,edge)
 
-FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
+###Making data nicer for plotting
+#head(compare)
+#View(compare)
+compare_edge2 <- compare_edge
+compare_edge2$site <- as.character(compare_edge2$site)
+compare_edge2$site[compare_edge$site == "choked_edge_wolf"] <- "Edge"
+compare_edge2$site <- as.character(compare_edge2$site)
+compare_edge2$site[compare_edge$site == "choked_inner_wolf"] <- "Interior"
+
+## function to estimate sds for boxplots
+min.mean.sd.max <- function(x) {
+  r <- c(min(x), mean(x) - sd(x), mean(x), mean(x) + sd(x), max(x))
+  names(r) <- c("ymin", "lower", "middle", "upper", "ymax")
+  r
+}
+```
+
+## survey results for Z density
 A) Shoot density (moved to supplementary material)
+```{r}
+hist(compare_edge2$number.shoots.quadrat)
+mod1 <- lm(number.shoots.quadrat ~ 1 + site, data = compare_edge2)
+mod0 <- lm(number.shoots.quadrat ~ 1, data = compare_edge2)
+anova(mod0, mod1)
+```
+
 ```{r}
 shoot.density <- ggplot(compare_edge2, aes(x = site, y = number.shoots.quadrat)) + 
   geom_point(size = 6, colour = "gray") +
@@ -49,14 +79,18 @@ shoot.density
 ggsave("shoot.density.jpg", plot = shoot.density, width = 3, height = 3)
 ```
 
-#Analysis
+## survey results for invertebrate density
 ```{r}
-#hist(compare_edge2$number.shoots.quadrat)
-mod1 <- lm(number.shoots.quadrat ~ site, data = compare_edge2)
-anova(mod1)
+
 ```
 
-A) Zostera shoot density
+
+FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
+
+
+#Analysis
+
+A) Zostera shoot dry weight
 ```{r}
 shoot.dwt <- ggplot(compare_edge2, aes(x = site, y = total.dry.macro.weight)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
@@ -78,9 +112,21 @@ Zostera above ground dry weight
 #hist(compare_edge2$total.dry.macro.weight)
 mod1 <- lm(total.dry.macro.weight ~ site, data = compare_edge2)
 anova(mod1)
+summary(mod1)
+coef(mod1)[1]*16
+(coef(mod1)[1]+coef(mod1)[2])*16
+(confint(mod1)[1,])*16
+(coef(mod1)[1]+confint(mod1)[2,1])*16
+(coef(mod1)[1]+confint(mod1)[2,2])*16
 ```
 
 B) Smithora load (dry weight)
+```{r}
+#hist(compare_edge2$total.dry.macro.weight)
+mod1 <- lm((macroepiphyte.weight/total.dry.macro.weight) ~ site, data = compare_edge2)
+anova(mod1)
+```
+
 ```{r}
 smithora <- ggplot(compare_edge2, aes(x = site, y = macroepiphyte.weight/total.dry.macro.weight)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
@@ -101,13 +147,18 @@ ggsave("smithora.jpg", plot = smithora, width = 3, height = 3)
 D) GRAZER ABUNDANCE -- placeholder, waiting for final plot labels from Gwen
 
 ```{r} 
-#head(grazers)
+#issues here: are these from two sample dates, and if so, which is which?
+# also, track down the plot labels which would indicate... what?
 grazers[is.na(grazers)] <- 0
 grazers1 <- melt(grazers, id = c(1,2,3,4))
+grazers1 <- grazers1 %>%
+  filter(Site != "")
 names(grazers1) <- c("Site", "Source", "Plot", "Size", "Species", "Abundance")
 grazers2 <- grazers1 %>%
   filter(Site != "0")
 grazers3 <- ddply(grazers2, .(Site, Source, Plot, Species), summarise, sum(Abundance))
+grazers3$N <- grazers3[,5]
+grazers3 <- grazers3[,-5]
 grazers4 <- grazers3 %>%
   filter(Species != "byozoan 1cm") %>%
   filter(Species != "NA") %>%
@@ -121,7 +172,7 @@ names(grazers4) <- c("Site", "Source", "Plot", "Species", "Abundance")
 grazers5 <- ddply(grazers4, .(Site, Source, Plot), summarise, sum(Abundance))
 names(grazers5) <- c("Site", "Source", "Plot","Abundance")
 
-grazers <- ggplot(grazers5, aes(x = Source, y = Abundance)) + 
+grazerfig <- ggplot(grazers5, aes(x = Source, y = Abundance)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
   scale_y_continuous(name = "Epifaunal Grazer Density (N / XX)") + #limits = c(0, 0.5)
@@ -132,8 +183,8 @@ grazers <- ggplot(grazers5, aes(x = Source, y = Abundance)) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = -1, size = 12))
 
-grazers
-ggsave("grazers.jpg", plot = grazers, width = 3, height = 3)
+grazerfig
+ggsave("grazerfig.jpg", plot = grazers, width = 3, height = 3)
 
 ## now once we know the treatments for each plot, we can plot total abundance
 ```
