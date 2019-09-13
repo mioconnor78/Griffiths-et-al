@@ -31,9 +31,13 @@ fig_nums(name = "Fig_1C", caption = "Smithora load at Eight sites in Choked Pass
 
 ```{r, echo=FALSE}
 ## load data
+smith.bio <- read.csv("./data/Smith.csv")
 compare <- read.csv("./data/choked_seagrass_smithora.csv")
 ang <- read.csv("./data/macrophyte_biomass_zeros_20170709.csv") # , stringsAsFactors=F
 sites <- read.csv("./data/choked_sites.csv")
+smith.expt <- read.csv("./data/Transplant_raw_smithora_wt.csv")
+grazertraits <- read.csv("./data/grazertraitsmaster.csv")
+grazers <- read.csv("./data/Grazers_EdgeVSInterior_V1_Aug09_2017.csv")
 ```
 
 ```{r, echo=FALSE}
