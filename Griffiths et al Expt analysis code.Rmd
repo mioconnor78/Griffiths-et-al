@@ -19,18 +19,21 @@ library(captioner)
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r, echo=FALSE}
-## load data
+```{r load data, echo=FALSE}
 smith.bio <- read.csv("./data/Smith.csv") # from experiment
 compare <- read.csv("./data/choked_seagrass_smithora.csv")
 sites <- read.csv("./data/choked_sites.csv")
 smith.expt <- read.csv("./data/Transplant_raw_smithora_wt.csv")
 grazertraits <- read.csv("./data/grazertraitsmaster.csv")
-grazers <- read.csv("./data/Grazers_EdgeVSInterior_V1_Aug09_2017.csv")
+#grazers <- read.csv("./data/Grazers_EdgeVSInterior_V1_Aug09_2017.csv")
+# in sept 2019 i dug through emails. i think we should use this grazer file: 
+grazers <- read.csv("./data/Grazers_EdgeVSInterior_2017.csv")
+grazer_eelgrass <- read.csv("./data/Grazers_Eelgrass_Data_EdgeVSInterior_2017.csv")
 ```
 
-```{r}
+```{r compare edge data not in use}
 ### compare
+## looks like there are zostera and smithora data that match the grazer samples. So let's use that and not this file, which appears to be only the July eelgrass samples.
 ## from meadow surveys, identify edge and inner samples
 edge <- filter(compare, site == "choked_edge_wolf")
 inner <- filter(compare, site == "choked_inner_wolf")
@@ -44,7 +47,28 @@ compare_edge2$site <- as.character(compare_edge2$site)
 compare_edge2$site[compare_edge$site == "choked_edge_wolf"] <- "Edge"
 compare_edge2$site <- as.character(compare_edge2$site)
 compare_edge2$site[compare_edge$site == "choked_inner_wolf"] <- "Interior"
+```
 
+```{r survey data}
+survey2_eg <- grazer_eelgrass %>%
+  select(-quadrat.location)%>%
+  select(-date)
+
+survey2_eg$Sample_time <- as.character(survey2_eg$Sample_time)
+survey2_eg$Sample_time[survey2_eg$Sample_time == "July"] <- "2"
+survey2_eg$Sample_time <- as.character(survey2_eg$Sample_time)
+survey2_eg$Sample_time[survey2_eg$Sample_time == "June"] <- "1"
+survey2_eg$Sample_time <- as.numeric(survey2_eg$Sample_time)
+
+survey2_eg$Sample_mo <- survey2_eg$Sample_time
+survey2_eg$Sample_mo[(survey2_eg$Sample_mo)=="1"] <- "June"
+survey2_eg$Sample_mo[(survey2_eg$Sample_mo)=="2"] <- "July"
+
+survey2_eg <- survey2_eg %>% 
+  mutate(ratio = as.numeric(smithora.dry.weight.grams)/zostra.final.dry.macro.weight.grams)
+```
+
+```{r mean mid sd max function}
 ## function to estimate sds for boxplots
 min.mean.sd.max <- function(x) {
   r <- c(min(x), mean(x) - sd(x), mean(x), mean(x) + sd(x), max(x))
@@ -55,28 +79,42 @@ min.mean.sd.max <- function(x) {
 
 ## survey results for Z density
 A) Shoot density (moved to supplementary material)
-```{r}
-hist(compare_edge2$number.shoots.quadrat)
-mod1 <- lm(number.shoots.quadrat ~ 1 + site, data = compare_edge2)
-mod0 <- lm(number.shoots.quadrat ~ 1, data = compare_edge2)
-anova(mod0, mod1)
+```{r survey shoot density models}
+hist(survey2_eg$number.shoots.quadrat)
+moda <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
+modb <- lm(number.shoots.quadrat ~ 1 + Zone, data = survey2_eg)
+modc <- lm(number.shoots.quadrat ~ 1 + Zone + Sample_time, data = survey2_eg)
+modd <- lm(number.shoots.quadrat ~ 1 + Zone*Sample_time, data = survey2_eg)
+model.sel(moda, modb, modc, modd)
+mavg <- model.avg(modd, modb, moda)
+
+summary(modd)
+
+Z.june.edge <- coef(mavg)[1]*16
+Z.jul.edge <- coef(mavg)[1]*16 + coef(mavg)[3]*16
+Z.jul.int <- coef(mavg)[1]*16 + coef(mavg)[4]*16
+
+
 ```
 
-```{r}
-shoot.density <- ggplot(compare_edge2, aes(x = site, y = number.shoots.quadrat)) + 
-  geom_point(size = 6, colour = "gray") +
+FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
+
+```{r shoot density plot}
+shoot.density <- ggplot(survey2_eg, aes(x = Zone, y = number.shoots.quadrat*16)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   geom_boxplot(size = 1, fill = "transparent") + 
-  scale_y_continuous(name = "Zostera Shoots (N/0.0625 m^2)", labels=c("0","5","10","15"), limits = c(0, 15)) +
+  scale_y_continuous(name = "Zostera Shoots (N/ m^2)") +
   theme_bw() + 
   theme(panel.grid = element_blank()) + 
-  xlab(expression("Location")) + 
-  geom_text(label = "A", x = 2.4, y = 15) +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "A", x = 2.4, y = 15) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = -1, size = 12))
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 shoot.density
 
-ggsave("shoot.density.jpg", plot = shoot.density, width = 3, height = 3)
+ggsave("shoot.density.jpg", plot = shoot.density, width = 6, height = 3)
 ```
 
 ## survey results for invertebrate density
@@ -84,81 +122,101 @@ ggsave("shoot.density.jpg", plot = shoot.density, width = 3, height = 3)
 
 ```
 
-
-FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
-
-
-#Analysis
-
-A) Zostera shoot dry weight
-```{r}
-shoot.dwt <- ggplot(compare_edge2, aes(x = site, y = total.dry.macro.weight)) + 
+## B) Zostera shoot dry weight
+```{r Zostera dry weight figure}
+shoot.dwt <- ggplot(survey2_eg, aes(x = Zone, y = zostra.final.dry.macro.weight.grams*16)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Zostera shoot dry weight (g)", labels=c("0","10","20", "30"), limits = c(0, 30)) +
+  scale_y_continuous(name = "Zostera shoot dry weight (g/m^2)") +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   theme_bw() + 
   theme(panel.grid = element_blank()) + 
-  xlab(expression("Location")) + 
-  geom_text(label = "A", x = 2.4, y = 30) +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "A", x = 2.4, y = 30) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = -1, size = 12))
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 shoot.dwt
-ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 3, height = 3)
+ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 6, height = 3)
 ```
 
 Zostera above ground dry weight
-```{r}
+```{r Zostera dry weight models}
 #hist(compare_edge2$total.dry.macro.weight)
-mod1 <- lm(total.dry.macro.weight ~ site, data = compare_edge2)
-anova(mod1)
-summary(mod1)
-coef(mod1)[1]*16
-(coef(mod1)[1]+coef(mod1)[2])*16
-(confint(mod1)[1,])*16
-(coef(mod1)[1]+confint(mod1)[2,1])*16
-(coef(mod1)[1]+confint(mod1)[2,2])*16
+hist(survey2_eg$zostra.final.dry.macro.weight.grams)
+moda <- lm(zostra.final.dry.macro.weight.grams ~ 1, data = survey2_eg)
+modb <- lm(zostra.final.dry.macro.weight.grams ~ 1 + Zone, data = survey2_eg)
+modc <- lm(zostra.final.dry.macro.weight.grams ~ 1 + Zone + Sample_time, data = survey2_eg)
+modd <- lm(zostra.final.dry.macro.weight.grams ~ 1 + Zone*Sample_time, data = survey2_eg)
+model.sel(moda, modb, modc, modd)
+
+summary(modc)
+Zjune.edge <- (coef(modc)[1] + coef(modc)[3])*16
+Zjul.edge <- (coef(modc)[1] + coef(modc)[3]*2)*16
+Zjune.int <- (coef(modc)[1] + coef(modc)[3] + coef(modc)[2])*16
+Zjul.int <- (coef(modc)[1] + coef(modc)[3]*2 + coef(modc)[2])*16
 ```
 
 B) Smithora load (dry weight)
-```{r}
+```{r Smithora load models}
 #hist(compare_edge2$total.dry.macro.weight)
-mod1 <- lm((macroepiphyte.weight/total.dry.macro.weight) ~ site, data = compare_edge2)
+mod1 <- lm((smithora.dry.weight.grams/zostra.final.dry.macro.weight.grams) ~ site, data = survey2_eg)
 anova(mod1)
+
+hist(log(survey2_eg$ratio))
+
+moda <- lm(ratio ~ 1, data = survey2_eg)
+modb <- lm(ratio ~ 1 + Zone, data = survey2_eg)
+modc <- lm(ratio ~ 1 + Zone + Sample_time, data = survey2_eg)
+modd <- lm(ratio ~ 1 + Zone*Sample_time, data = survey2_eg)
+model.sel(moda, modb, modc, modd)
+
+mavg <- model.avg(modd, modb, moda)
+
+summary(modb)
+
+Z.june.edge <- coef(mavg)[1]*16
+Z.jul.edge <- coef(mavg)[1]*16 + coef(mavg)[3]*16
+Z.jul.int <- coef(mavg)[1]*16 + coef(mavg)[4]*16
 ```
 
-```{r}
-smithora <- ggplot(compare_edge2, aes(x = site, y = macroepiphyte.weight/total.dry.macro.weight)) + 
+```{r Smithora load plot}
+smithora <- ggplot(survey2_eg, aes(x = Zone, y = ratio)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
   scale_y_continuous(name = expression(paste(italic("Smithora"), " (g dry wt / g Zostera dry wt)")), limits = c(0, 0.5)) +
   theme_bw() + 
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   theme(panel.grid = element_blank()) + 
-  xlab(expression("Location")) + 
-  geom_text(label = "B", x = 2.4, y = 0.5) +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "B", x = 2.4, y = 0.5) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = -1, size = 12))
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 smithora
 
-ggsave("smithora.jpg", plot = smithora, width = 3, height = 3)
+ggsave("smithora.jpg", plot = smithora, width = 6, height = 3)
 ```
 
-D) GRAZER ABUNDANCE -- placeholder, waiting for final plot labels from Gwen
+D) GRAZER ABUNDANCE
 
-```{r} 
-#issues here: are these from two sample dates, and if so, which is which?
-# also, track down the plot labels which would indicate... what?
+```{r invertebrate data} 
+#found i think the final grazer file in an email from coreen; using that here and cleaning it.
+# I can match the grazer data with the eelgrass data from the same plots!
 grazers[is.na(grazers)] <- 0
-grazers1 <- melt(grazers, id = c(1,2,3,4))
-grazers1 <- grazers1 %>%
-  filter(Site != "")
-names(grazers1) <- c("Site", "Source", "Plot", "Size", "Species", "Abundance")
-grazers2 <- grazers1 %>%
-  filter(Site != "0")
-grazers3 <- ddply(grazers2, .(Site, Source, Plot, Species), summarise, sum(Abundance))
-grazers3$N <- grazers3[,5]
-grazers3 <- grazers3[,-5]
+grazers1 <- grazers %>%
+  filter(Seagrass.ASU != "ASU") %>%
+  #select(-month_replicate_meadow.position) %>%
+  select(-Seagrass.ASU) %>%
+  select(-Distance.along.transect..m.)%>%
+  select(-identifyer)%>%
+  select(-Date.collected)%>%
+  select(-size..mm.)
+grazers1 <- melt(grazers1, id = c(1,2,3,4))
+names(grazers1) <- c("Sample_ID","Sample_time", "Site", "Zone", "Species", "Abundance")
+grazers3 <- ddply(grazers1, .(Sample_ID, Site, Zone, Sample_time, Species), summarise, sum(Abundance))
+grazers3$N <- grazers3[,6]
+grazers3 <- grazers3[,-6]
 grazers4 <- grazers3 %>%
   filter(Species != "byozoan 1cm") %>%
   filter(Species != "NA") %>%
@@ -166,37 +224,116 @@ grazers4 <- grazers3 %>%
   filter(Species != "flat worm") %>%
   filter(Species != "anemone") %>%
   filter(Species != "fruit loop") %>%
-  filter(Species != "Dungeness") %>%
-  filter(Plot != "ASU") 
-names(grazers4) <- c("Site", "Source", "Plot", "Species", "Abundance")
-grazers5 <- ddply(grazers4, .(Site, Source, Plot), summarise, sum(Abundance))
-names(grazers5) <- c("Site", "Source", "Plot","Abundance")
-
-grazerfig <- ggplot(grazers5, aes(x = Source, y = Abundance)) + 
-  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Epifaunal Grazer Density (N / XX)") + #limits = c(0, 0.5)
-  theme_bw() + 
-  theme(panel.grid = element_blank()) + 
-  xlab(expression("Location")) + 
-  geom_text(label = "C", x = 2.4, y = 650) +
-  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = -1, size = 12))
-
-grazerfig
-ggsave("grazerfig.jpg", plot = grazers, width = 3, height = 3)
-
-## now once we know the treatments for each plot, we can plot total abundance
+  filter(Species != "Dungeness")
+names(grazers4) <- c("Sample_ID", "Site", "Zone", "Sample_time", "Species", "Abundance")
+grazers5 <- ddply(grazers4, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(Abundance))
+names(grazers5) <- c("Sample_ID", "Site", "Zone", "Sample_time","Abundance")
 ```
 
-FIGURE 3: Smithora results post experiment - remake this figure. april 5th: i'm not if it still needs to be remade - i have to check this.
-```{r}
-#head(smith.expt)
+```{r combine invert data with shoot data}
+# ok now merge grazer file with the eelgrass file
+combined <- merge(survey2_eg, grazers5, by.x = "month_replicate_meadow.position", by.y = "Sample_ID")
+
+combined <- combined %>% 
+  mutate(gpg = Abundance/zostra.final.dry.macro.weight.grams)
+```
+
+```{r plots for combined factors}
+plot(zostra.final.dry.macro.weight.grams ~ number.shoots.quadrat, data = combined)
+```
+
+
+```{r invert plots}
+hist(log(grazers5$Abundance))
+grazerfigA <- ggplot(combined, aes(x = Zone.y, y = gpg)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Epifaunal Grazer Density (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
+
+grazerfigA
+ggsave("grazerfigA.jpg", plot = grazerfigA, width = 6, height = 3)
+
+grazerfigB <- ggplot(combined, aes(x = Zone.y, y = Abundance)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Epifaunal Grazer Density (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
+
+grazerfigB
+ggsave("grazerfigB.jpg", plot = grazerfigB, width = 6, height = 3)
+```
+
+```{r invert models}
+moda <- lm(gpg ~ 1, data = combined)
+modb <- lm(gpg ~ 1 + Zone.y, data = combined)
+modc <- lm(gpg ~ 1 + Zone.y + Sample_time.x, data = combined)
+modd <- lm(gpg ~ 1 + Zone.y*Sample_time.x, data = combined)
+model.sel(moda, modb, modc, modd)
+mavg <- model.avg(modd, moda)
+summary(mavg)
+summary(modd)
+```
+
+
+```{r grazers and smithora plot}
+grazersmith <- ggplot(combined, aes(x = gpg, y = ratio, color = Sample_mo)) + 
+  geom_point(size=3) +
+  #geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  #stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  #scale_y_continuous(name = "Epifaunal Grazer Density (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("grazers / g Zostera")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
+
+grazersmith
+```
+
+```{r models for smithora load}
+moda <- lm(ratio ~ 1, data = combined)
+modb <- lm(ratio ~ 1 + Zone.y, data = combined)
+modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
+modd <- lm(ratio ~ 1 + Zone.y*Sample_time.x, data = combined)
+mode <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg, data = combined)
+modf <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
+modg <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
+modh <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
+modi <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
+modj <- lm(ratio ~ 1 + Zone.y + Sample_time.x + number.shoots.quadrat, data = combined)
+modk <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg, data = combined)
+modl <- lm(ratio ~ 1 + Zone.y + gpg, data = combined)
+modm <- lm(ratio ~ 1 + gpg, data = combined)
+modn <- lm(ratio ~ 1 + number.shoots.quadrat, data = combined)
+modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = combined)
+modp <- lm(ratio ~ 1 + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
+model.sel(moda, modb, modc, modd, mode, modf, modg, modh, modi, modj, modk, modl, modm, modn, modo, modp)
+```
+
+
+## FIGURE 3: Smithora results post experiment - remake this figure. april 5th: i'm not sure if it still needs to be remade - i have to check this.
+```{r experiment results}
 smith.expt$Source <- revalue(smith.expt$Source, c("Edge"="Edge (high Smithora)",  "Interior"="Interior (low Smithora)"))
 smith.expt$Source <- as.factor(smith.expt$Source)
 smith.expt$Type <- revalue(smith.expt$Category.in.transplant, c("Ambient"="Unmanip.", "Experiment"="Transplanted", "Control"="Control"))
 smith.expt$Type <- as.factor(smith.expt$Type)
 smith.expt$ratio <- smith.expt$Ratio.smithora.leaves
+smith.expt$Final.Zone <- smith.expt$Final.Location
 
 experiment <- ggplot(smith.expt[(smith.expt$Type != "Unmanip."),], aes(x = Type, y = ratio)) + 
 geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
@@ -213,18 +350,22 @@ experiment
 ggsave("experiment.jpg", plot = experiment, width = 6, height = 3)
 ```
 
-Experimental analysis: 
+##Experimental analysis: 
 
-first analyze control vs unmanipulated
+#first analyze control vs unmanipulated
 ```{r}
 hist((smith.expt[(smith.expt$Type != "Transplanted"),]$ratio))
 mod1 <- lm((smith.expt[(smith.expt$Type != "Transplanted"),]$ratio) ~ smith.expt[(smith.expt$Type != "Transplanted"),]$Type + smith.expt[(smith.expt$Type != "Transplanted"),]$Source)
 anova(mod1)
 ```
 
-then analyze control v transplanted
+```{r two way anova}
+mod1 <- lm()
+```
+
+# then analyze control v transplanted
 ```{r}
 hist(log(smith.expt[(smith.expt$Type != "Unmanip."),]$ratio + 1))
-mod2 <- lm(log(smith.expt[(smith.expt$Type != "Unmanip."),]$ratio + 1) ~ smith.expt[(smith.expt$Type != "Unmanip."),]$Type * smith.expt[(smith.expt$Type != "Unmanip."),]$Source)
-anova(mod2)
+mod2 <- lm(log(ratio + 1) ~ Type*Source, data = smith.expt[(smith.expt$Type != "Unmanip."),])
+summary(mod2)
 ```
