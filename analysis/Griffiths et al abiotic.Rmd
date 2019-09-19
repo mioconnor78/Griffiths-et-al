@@ -1,0 +1,48 @@
+---
+title: "Griffiths et al abiotic"
+author: "Mary OConnor"
+date: '2019-09-13'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+library(plyr)
+library(stringr)
+#library(nlme)
+library(MuMIn)
+library(knitr)
+library(captioner)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load data, echo=FALSE}
+data <- read.csv("./data/Smithora_2015_month_year_summary.csv") # from experiment
+View(data)
+
+# Choked_Sandspit is near OS/IS
+# Choked_Inner is closer to IA than Wolf, but still a bit more towards the center of the bed
+# I included some of the beach seining YSI measurements for wolf, so you have both CTD (Choked_Wolf) and seining YSI (Wolf_Beach) , and then Choked_Lower is really on the southwest edge of the bed near the lower islands
+
+# identify data as edge or interior
+data$zone <- as.character(data$site_name)
+data$zone[data$zone == "Wolf_Beach"] <- "Edge"
+data$zone[data$zone == "Choked_Wolf"] <- "Edge"
+data$zone[data$zone == "Choked_Inner"] <- "Interior"
+data$zone[data$zone == "Choked_Lower"] <- "Edge"
+data$zone[data$zone == "Choked_Sandspit"] <- "Edge"
+
+# at Wolf_Beach vs Choked_Inner on same day:
+
+data.expt <- data %>%
+  filter(., site_name == "Choked_Wolf" | site_name == "Wolf_Beach" | site_name == "Choked_Inner")
+
+data.meadow <- data %>%
+  filter(., site_name != "Wolf_Beach")
+
+means <- data.expt %>%
+  
+```
