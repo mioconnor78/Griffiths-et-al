@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r load data, echo=FALSE}
-data <- read.csv("./data/Smithora_2015_month_year_summary.csv") # from experiment
+data <- read.csv("../data/Smithora_2015_month_year_summary2.csv") # from experiment
 View(data)
 
 # Choked_Sandspit is near OS/IS
@@ -37,12 +37,23 @@ data$zone[data$zone == "Choked_Sandspit"] <- "Edge"
 
 # at Wolf_Beach vs Choked_Inner on same day:
 
+data <- data %>% 
+  filter(., line_out_depth == 0 | line_out_depth == 5 | line_out_depth == 10)
+
 data.expt <- data %>%
   filter(., site_name == "Choked_Wolf" | site_name == "Wolf_Beach" | site_name == "Choked_Inner")
 
 data.meadow <- data %>%
-  filter(., site_name != "Wolf_Beach")
+  filter(., site_name != "Wolf_Beach" ) %>%
+  filter(., site_name != "Choked_Wolf" )
 
-means <- data.expt %>%
-  
+salinity <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(salinity_ysi_mean))
+
+temps <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(temp_ysi_mean))
+temps_ctd <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(temp_C_ctd_mean))
+
+View(temps)
+View(temps_ctd)
+
+
 ```

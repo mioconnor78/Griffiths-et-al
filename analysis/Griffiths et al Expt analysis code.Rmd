@@ -20,15 +20,15 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r load data, echo=FALSE}
-smith.bio <- read.csv("./data/Smith.csv") # from experiment
-compare <- read.csv("./data/choked_seagrass_smithora.csv")
-sites <- read.csv("./data/choked_sites.csv")
-smith.expt <- read.csv("./data/Transplant_raw_smithora_wt.csv")
-grazertraits <- read.csv("./data/grazertraitsmaster.csv")
+smith.bio <- read.csv("../data/Smith.csv") # from experiment
+compare <- read.csv("../data/choked_seagrass_smithora.csv")
+sites <- read.csv("../data/choked_sites.csv")
+smith.expt <- read.csv("../data/Transplant_raw_smithora_wt.csv")
+grazertraits <- read.csv("../data/grazertraitsmaster.csv")
 #grazers <- read.csv("./data/Grazers_EdgeVSInterior_V1_Aug09_2017.csv")
 # in sept 2019 i dug through emails. i think we should use this grazer file: 
-grazers <- read.csv("./data/Grazers_EdgeVSInterior_2017.csv")
-grazer_eelgrass <- read.csv("./data/Grazers_Eelgrass_Data_EdgeVSInterior_2017.csv")
+grazers <- read.csv("../data/Grazers_EdgeVSInterior_2017.csv")
+grazer_eelgrass <- read.csv("../data/Grazers_Eelgrass_Data_EdgeVSInterior_2017.csv")
 ```
 
 ```{r compare edge data not in use}
