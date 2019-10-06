@@ -31,9 +31,10 @@ fig_nums(name = "Fig_1C", caption = "Smithora load at Eight sites in Choked Pass
 
 ```{r, echo=FALSE}
 ## load data
-compare <- read.csv("./data/choked_seagrass_smithora.csv")
-ang <- read.csv("./data/macrophyte_biomass_zeros_20170709.csv") # , stringsAsFactors=F
-sites <- read.csv("./data/choked_sites.csv")
+compare <- read.csv("../data/choked_seagrass_smithora.csv")
+ang <- read.csv("../data/macrophyte_biomass_zeros_20170709.csv") # , stringsAsFactors=F
+sites <- read.csv("../data/choked_sites.csv")
+depths <- read.csv("../data/tides.morphos.Choked2015.csv")
 ```
 
 ```{r, echo=FALSE}
@@ -97,11 +98,15 @@ ang5$non_zero <- ifelse(ang5$ratio > 0, 1, 0)
 ang5$group.y <- revalue(ang5$group.y, c(edge = "Edge Sites", inner ="Interior Sites"))
 ang5$site <- revalue(ang5$site, c("inner sandspit" = "IS", "outer sandspit" = "OS","inner tristan" = "IT", "inner ang" = "IA", "wolf" = "WF", "inner derek" = "ID", "alcove" = "AL", "inner carolyn" = "IC"))
 
+ang6 <- merge(ang5, depths, by.x = "site", by.y = "Transect.Abbr")
+ang5 <- ang6
 
 summary<-ddply(ang5, .(site, sample_time, group.y), summarise, min(logratio))
 
 site.summary<-ddply(ang5, .(site, sample_time, group.y), summarise, length(distance_m))
-#hist(log(ang5$ratio))
+View(site.summary) #hist(log(ang5$ratio))
+
+plot(ang5$site.depths.m ~ ang5$group.y)
 ```
 
 Figure 1C: Smithora load in edge v interior sites  
@@ -145,8 +150,10 @@ m1a <- glmer(non_zero ~ group.y*sample_time + (1|site), family = binomial(link =
 m1b <- glmer(non_zero ~ group.y+sample_time + (1|site), family = binomial(link = logit), verbose = 1, data = ang5)
 m1c <- glmer(non_zero ~ group.y + (1|site), family = binomial(link = logit), verbose = 1, data = ang5)
 m1d <- glmer(non_zero ~ sample_time + (1|site), family = binomial(link = logit), verbose = 1, data = ang5)
+m1e <- glmer(non_zero ~ group.y + site.depths.m + (1|site), family = binomial(link = logit), verbose = 1, data = ang5)
+m1f <- glmer(non_zero ~ site.depths.m + (1|site), family = binomial(link = logit), verbose = 1, data = ang5)
 
-model.sel(m1a, m1b, m1c, m1d)
+model.sel(m1a, m1b, m1c, m1d, m1e, m1f)
 coef1a <- as.data.frame(coef(m1a)$site[1:8, 1:4])
 (bin_int <- plogis(coef1a[,1])) #make these values numeric
 (bin_group.y <- plogis(coef1a[,2]))
@@ -155,10 +162,14 @@ coef1a <- as.data.frame(coef(m1a)$site[1:8, 1:4])
 
 
 m2a <- glmer(ratio ~ group.y*sample_time + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
-m2b <- glmer(ratio ~ group.y+sample_time + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+m2b <- glmer(ratio ~ group.y + sample_time + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
 m2c <- glmer(ratio ~ group.y + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
 m2d <- glmer(ratio ~ sample_time + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
-model.sel(m2a, m2b, m2c, m2d)
+m2e <- glmer(ratio ~ group.y + site.depths.m + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+m2f <- glmer(ratio ~ group.y*sample_time + site.depths.m + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+m2g <- glmer(ratio ~ group.y + site.depths.m*sample_time + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+m2h <- glmer(ratio ~ site.depths.m*sample_time + (1|site), data = subset(ang5, non_zero == 1), family =Gamma(link = log))
+model.sel(m2a, m2b, m2c, m2d, m2e, m2f, m2g, m2h)
 
 (gamma_coef <- exp(coef(m2c)$site[1:8, 1]))
 (exp(confint(m2)))

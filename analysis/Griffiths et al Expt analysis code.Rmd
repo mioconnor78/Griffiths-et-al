@@ -29,6 +29,7 @@ grazertraits <- read.csv("../data/grazertraitsmaster.csv")
 # in sept 2019 i dug through emails. i think we should use this grazer file: 
 grazers <- read.csv("../data/Grazers_EdgeVSInterior_2017.csv")
 grazer_eelgrass <- read.csv("../data/Grazers_Eelgrass_Data_EdgeVSInterior_2017.csv")
+grazer_taxa <- read.csv("../data/invert.taxa.csv")
 ```
 
 ```{r compare edge data not in use}
@@ -216,26 +217,46 @@ grazers1 <- melt(grazers1, id = c(1,2,3,4))
 names(grazers1) <- c("Sample_ID","Sample_time", "Site", "Zone", "Species", "Abundance")
 grazers3 <- ddply(grazers1, .(Sample_ID, Site, Zone, Sample_time, Species), summarise, sum(Abundance))
 grazers3$N <- grazers3[,6]
-grazers3 <- grazers3[,-6]
-grazers4 <- grazers3 %>%
-  filter(Species != "byozoan 1cm") %>%
-  filter(Species != "NA") %>%
-  filter(Species != "stalked jelly") %>%
-  filter(Species != "flat worm") %>%
-  filter(Species != "anemone") %>%
-  filter(Species != "fruit loop") %>%
-  filter(Species != "Dungeness")
-names(grazers4) <- c("Sample_ID", "Site", "Zone", "Sample_time", "Species", "Abundance")
-grazers5 <- ddply(grazers4, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(Abundance))
-names(grazers5) <- c("Sample_ID", "Site", "Zone", "Sample_time","Abundance")
+inverts <- grazers3
+inverts2 <- merge(inverts, grazer_taxa, by.x = "Species", by.y = "taxon.name")
+inverts_table <- ddply(inverts, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(N))
+names(inverts_table) <- c("Sample_ID", "Site", "Zone", "Sample_time","inverts_N")
+
+grazers4 <- inverts2 %>%
+  filter(grazer == "y")
+grazers_table <- ddply(grazers4, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(N))
+names(grazers_table) <- c("Sample_ID", "Site", "Zone", "Sample_time","grazers_N")
+
+grazers_gastropod <- grazers4 %>%
+  filter(phylum == "mollusca")
+gastropod_table <- ddply(grazers_gastropod, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(N))
+names(gastropod_table) <- c("Sample_ID", "Site", "Zone", "Sample_time","gastro_N")
+
+grazers_crustacean <- grazers4 %>%
+  filter(phylum == "arthropoda")
+crustacean_table <- ddply(grazers_crustacean, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(N))
+names(crustacean_table) <- c("Sample_ID", "Site", "Zone", "Sample_time","crust_N")
+
+space_comp <- inverts2 %>%
+  filter(Species == "mytilus", phylum == "bryozoa")
+
+#names(grazers4) <- c("Sample_ID", "Site", "Zone", "Sample_time", "Species", "Abundance")
+
 ```
 
 ```{r combine invert data with shoot data}
 # ok now merge grazer file with the eelgrass file
-combined <- merge(survey2_eg, grazers5, by.x = "month_replicate_meadow.position", by.y = "Sample_ID")
+combined <- merge(survey2_eg, inverts_table, by.x = "month_replicate_meadow.position", by.y = "Sample_ID", no.dups = TRUE)
+combined2 <- merge(combined, grazers_table, by.x = "month_replicate_meadow.position", by.y = "Sample_ID", no.dups = TRUE)
+combined3 <- merge(combined2, gastropod_table, by.x = "month_replicate_meadow.position", by.y = "Sample_ID", suffixes = c(".c", ".g"))
+combined4 <- merge(combined3, crustacean_table, by.x = "month_replicate_meadow.position", by.y = "Sample_ID", suffixes = c(".t", ".cr"))
 
-combined <- combined %>% 
-  mutate(gpg = Abundance/zostra.final.dry.macro.weight.grams)
+combined <- combined4 %>% 
+  mutate(gpgT = inverts_N/zostra.final.dry.macro.weight.grams) %>%
+  mutate(gpgG = grazers_N/zostra.final.dry.macro.weight.grams) %>%
+  mutate(gpgGa = gastro_N/zostra.final.dry.macro.weight.grams) %>%
+  mutate(gpgC = crust_N/zostra.final.dry.macro.weight.grams)
+
 ```
 
 ```{r plots for combined factors}
@@ -244,26 +265,57 @@ plot(zostra.final.dry.macro.weight.grams ~ number.shoots.quadrat, data = combine
 
 
 ```{r invert plots}
-hist(log(grazers5$Abundance))
-grazerfigA <- ggplot(combined, aes(x = Zone.y, y = gpg)) + 
+#hist(log(combined$Abundance))
+grazerfigA <- ggplot(combined, aes(x = Zone.y, y = gpgT)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Epifaunal Grazer Density (N / g Zostera)") + #limits = c(0, 0.5)
+  scale_y_continuous(name = "Invertebrates (N / g Zostera)") + #limits = c(0, 0.5)
   theme_bw() + 
   theme(panel.grid = element_blank()) +
   facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
-  xlab(expression("Zone")) + 
+  xlab(expression("")) + 
   #geom_text(label = "C", x = 2.4, y = 650) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 grazerfigA
-ggsave("grazerfigA.jpg", plot = grazerfigA, width = 6, height = 3)
+ggsave("Inverts.jpg", plot = grazerfigA, width = 6, height = 2.5)
 
-grazerfigB <- ggplot(combined, aes(x = Zone.y, y = Abundance)) + 
+grazerfigB <- ggplot(combined, aes(x = Zone.y, y = gpgG)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Epifaunal Grazer Density (N / g Zostera)") + #limits = c(0, 0.5)
+  scale_y_continuous(name = "Grazers (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
+
+grazerfigB
+ggsave("Grazers.jpg", plot = grazerfigB, width = 6, height = 2.5)
+
+
+grazerfigC <- ggplot(combined, aes(x = Zone.y, y = gpgGa)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Gastropod Grazers (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 12))
+
+grazerfigC
+ggsave("Gastropods.jpg", plot = grazerfigC, width = 6, height = 2.5)
+
+grazerfigD <- ggplot(combined, aes(x = Zone.y, y = gpgC)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Crustaceans Grazers (N / g Zostera)") + #limits = c(0, 0.5)
   theme_bw() + 
   theme(panel.grid = element_blank()) +
   facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
@@ -272,19 +324,46 @@ grazerfigB <- ggplot(combined, aes(x = Zone.y, y = Abundance)) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 12))
 
-grazerfigB
-ggsave("grazerfigB.jpg", plot = grazerfigB, width = 6, height = 3)
+grazerfigD
+ggsave("Crustaceans.jpg", plot = grazerfigD, width = 6, height = 2.5)
 ```
 
 ```{r invert models}
-moda <- lm(gpg ~ 1, data = combined)
-modb <- lm(gpg ~ 1 + Zone.y, data = combined)
-modc <- lm(gpg ~ 1 + Zone.y + Sample_time.x, data = combined)
-modd <- lm(gpg ~ 1 + Zone.y*Sample_time.x, data = combined)
+moda <- lm(gpgT ~ 1, data = combined)
+modb <- lm(gpgT ~ 1 + Zone.y, data = combined)
+modc <- lm(gpgT ~ 1 + Zone.y + Sample_time.x, data = combined)
+modd <- lm(gpgT ~ 1 + Zone.y*Sample_time.x, data = combined)
 model.sel(moda, modb, modc, modd)
 mavg <- model.avg(modd, moda)
 summary(mavg)
 summary(modd)
+
+modGa <- lm(gpgG ~ 1, data = combined)
+modGb <- lm(gpgG ~ 1 + Zone.y, data = combined)
+modGc <- lm(gpgG ~ 1 + Zone.y + Sample_time.x, data = combined)
+modGd <- lm(gpgG ~ 1 + Zone.y*Sample_time.x, data = combined)
+model.sel(modGa, modGb, modGc, modGd)
+mavGg <- model.avg(modGd, modGa)
+summary(mavGg)
+summary(modGd)
+
+modCa <- lm(gpgC ~ 1, data = combined)
+modCb <- lm(gpgC ~ 1 + Zone.y, data = combined)
+modCc <- lm(gpgC ~ 1 + Zone.y + Sample_time.x, data = combined)
+modCd <- lm(gpgC ~ 1 + Zone.y*Sample_time.x, data = combined)
+model.sel(modCa, modCb, modCc, modCd)
+mavCg <- model.avg(modCd, modCa)
+summary(mavCg)
+summary(modCd)
+
+modGaa <- lm(gpgGa ~ 1, data = combined)
+modGab <- lm(gpgGa ~ 1 + Zone.y, data = combined)
+modGac <- lm(gpgGa ~ 1 + Zone.y + Sample_time.x, data = combined)
+modGad <- lm(gpgGa ~ 1 + Zone.y*Sample_time.x, data = combined)
+model.sel(modGaa, modGab, modGac, modGad)
+mavGag <- model.avg(modGad, modGaa)
+summary(mavCg)
+summary(modGab)
 ```
 
 

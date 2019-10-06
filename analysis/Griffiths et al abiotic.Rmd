@@ -48,6 +48,9 @@ data.meadow <- data %>%
   filter(., site_name != "Choked_Wolf" )
 
 salinity <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(salinity_ysi_mean))
+salinity_ctd <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(salinity_psu_ctd_mean))
+View(salinity)
+View(salinity_ctd)
 
 temps <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(temp_ysi_mean))
 temps_ctd <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(temp_C_ctd_mean))
@@ -55,5 +58,19 @@ temps_ctd <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, m
 View(temps)
 View(temps_ctd)
 
+chla <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(chla_mean))
+View(chla)
 
+NOx <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(no2_no3_mean))
+View(NOx)
+
+PO4 <- ddply(data, c("Month", "site_name", "line_out_depth"), summarize, mean(po4_mean))
+View(PO4)
+
+
+```
+
+```{r}
+depths <- read.csv("../data/tides.morphos.Choked2015.csv") # from experiment
+View(depths)
 ```
