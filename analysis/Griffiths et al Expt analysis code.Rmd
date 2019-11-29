@@ -79,8 +79,16 @@ min.mean.sd.max <- function(x) {
 ```
 
 ## survey results for Z density
-A) Shoot density (moved to supplementary material)
-```{r survey shoot density models}
+
+```{r TABLE 4A survey shoot density models}
+plot(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
+mod1 <- lm(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
+mod2 <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
+anova(mod1, mod2)
+```
+
+A) Shoot density
+```{r TABLE 4A survey shoot density models}
 hist(survey2_eg$number.shoots.quadrat)
 moda <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
 modb <- lm(number.shoots.quadrat ~ 1 + Zone, data = survey2_eg)
@@ -118,11 +126,6 @@ shoot.density
 ggsave("shoot.density.jpg", plot = shoot.density, width = 6, height = 3)
 ```
 
-## survey results for invertebrate density
-```{r}
-
-```
-
 ## B) Zostera shoot dry weight
 ```{r Zostera dry weight figure}
 shoot.dwt <- ggplot(survey2_eg, aes(x = Zone, y = zostra.final.dry.macro.weight.grams*16)) + 
@@ -142,7 +145,7 @@ ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 6, height = 3)
 ```
 
 Zostera above ground dry weight
-```{r Zostera dry weight models}
+```{r TABLE 4B Zostera dry weight models}
 #hist(compare_edge2$total.dry.macro.weight)
 hist(survey2_eg$zostra.final.dry.macro.weight.grams)
 moda <- lm(zostra.final.dry.macro.weight.grams ~ 1, data = survey2_eg)
@@ -159,7 +162,7 @@ Zjul.int <- (coef(modc)[1] + coef(modc)[3]*2 + coef(modc)[2])*16
 ```
 
 B) Smithora load (dry weight)
-```{r Smithora load models}
+```{r TABLE 4C Smithora load models}
 #hist(compare_edge2$total.dry.macro.weight)
 mod1 <- lm((smithora.dry.weight.grams/zostra.final.dry.macro.weight.grams) ~ site, data = survey2_eg)
 anova(mod1)
@@ -219,11 +222,13 @@ grazers3 <- ddply(grazers1, .(Sample_ID, Site, Zone, Sample_time, Species), summ
 grazers3$N <- grazers3[,6]
 inverts <- grazers3
 inverts2 <- merge(inverts, grazer_taxa, by.x = "Species", by.y = "taxon.name")
+inverts2 <- inverts2[,-6]
 inverts_table <- ddply(inverts, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(N))
 names(inverts_table) <- c("Sample_ID", "Site", "Zone", "Sample_time","inverts_N")
 
 grazers4 <- inverts2 %>%
   filter(grazer == "y")
+
 grazers_table <- ddply(grazers4, .(Sample_ID, Site, Zone, Sample_time), summarise, sum(N))
 names(grazers_table) <- c("Sample_ID", "Site", "Zone", "Sample_time","grazers_N")
 
@@ -260,7 +265,20 @@ combined <- combined4 %>%
 ```
 
 ```{r plots for combined factors}
-plot(zostra.final.dry.macro.weight.grams ~ number.shoots.quadrat, data = combined)
+plot(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
+mod1 <- lm(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
+mod2 <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
+anova(mod1, mod2)
+
+plot(gpgT ~ zostra.final.dry.macro.weight.grams, data = combined)
+mod1 <- lm(gpgT ~ zostra.final.dry.macro.weight.grams,  data = combined)
+mod2 <- lm(gpgT ~ 1,  data = combined)
+anova(mod1, mod2)
+
+plot(gpgT ~ number.shoots.quadrat, data = combined)
+mod1 <- lm(gpgT ~ number.shoots.quadrat,  data = combined)
+mod2 <- lm(gpgT ~ 1,  data = combined)
+anova(mod1, mod2)
 ```
 
 
@@ -328,7 +346,7 @@ grazerfigD
 ggsave("Crustaceans.jpg", plot = grazerfigD, width = 6, height = 2.5)
 ```
 
-```{r invert models}
+```{r TABLE 4D invert models}
 moda <- lm(gpgT ~ 1, data = combined)
 modb <- lm(gpgT ~ 1 + Zone.y, data = combined)
 modc <- lm(gpgT ~ 1 + Zone.y + Sample_time.x, data = combined)
@@ -384,7 +402,7 @@ grazersmith <- ggplot(combined, aes(x = gpg, y = ratio, color = Sample_mo)) +
 grazersmith
 ```
 
-```{r models for smithora load}
+```{r TABLE 5 models for smithora load}
 moda <- lm(ratio ~ 1, data = combined)
 modb <- lm(ratio ~ 1 + Zone.y, data = combined)
 modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
