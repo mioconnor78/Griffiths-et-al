@@ -29,10 +29,11 @@ fig_nums <- captioner::captioner(prefix = "Figure.")
 fig_nums(name = "Fig_1C", caption = "Smithora load at Eight sites in Choked Pass", display = FALSE)
 ```
 
-```{r, echo=FALSE}
+```{r load data, echo=FALSE}
 ## load data
 compare <- read.csv("../data/choked_seagrass_smithora.csv")
-ang <- read.csv("../data/macrophyte_biomass_zeros_20170709.csv") # , stringsAsFactors=F
+#ang <- read.csv("../data/macrophyte_biomass_zeros_20170709.csv") # , stringsAsFactors=F
+ang <- read.csv("../data/macrophyte_biomass_zeros_20170709_smneg.csv") # I manually added small values to smithora dry weights when 0 was entered but smithora was noted in the notes column
 sites <- read.csv("../data/choked_sites.csv")
 depths <- read.csv("../data/tides.morphos.Choked2015.csv")
 ```
@@ -61,9 +62,9 @@ min.mean.sd.max <- function(x) {
 }
 ```
 
-FIGURE 1: SPATIAL TRENDS IN SMITHORA LOAD
+###FIGURE 1: SPATIAL TRENDS IN SMITHORA LOAD
 
-```{r, echo=FALSE}
+```{r data processing}
 ang2 <- merge(ang, sites, by.x = "site", by.y = "name2")
 
 ## this next bit selects the sites we want, and removes a couple of rows that appeared to be duplicates, zeros, or unclearly assigned to a shoot. 
@@ -79,19 +80,25 @@ ang <- ang2 %>%
   select(-uniqueID2)
 
 ang.smith <- subset(ang, ang$macrophyte %in% "smithora")
-ang.zostera<- subset(ang, ang$macrophyte %in% "zostera")
+ang.zostera <- subset(ang, ang$macrophyte %in% "zostera")
+ang.zostera$shoot_width_cm[ang.zostera$shoot_width_cm == "10"] <- "1.0"
+
+ang.zostera <- ang.zostera %>%
+ mutate(LAI = 2*(shoot_length_cm * as.numeric(shoot_width_cm)) * blades) 
 
 ang4 <- merge(ang.smith, ang.zostera, by = c("blade_sample_id", "year","sample_time", "site", "distance_m"), all = TRUE)
-ang5 <- ang4[,c("site", "group.y", "sample_time", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y")]
+ang5 <- ang4[, c("site", "group.y", "sample_time", "blade_sample_id", "distance_m", "macrophyte.x","final_dry_g.x", "macrophyte.y", "final_dry_g.y", "LAI")]
 ang5 <- ang4 %>%
-  select(c(site, group.y, sample_time, blade_sample_id, distance_m, macrophyte.x,final_dry_g.x, macrophyte.y, final_dry_g.y)) %>%
+  select(c(site, group.y, sample_time, blade_sample_id, distance_m, macrophyte.x,final_dry_g.x, macrophyte.y, final_dry_g.y, LAI)) %>%
   filter(macrophyte.y == "zostera") %>%
   replace_na(list(macrophyte.x = "smithora", final_dry_g.x = "0")) %>%
   mutate(ratio = as.numeric(final_dry_g.x) / final_dry_g.y)
 
-ang5$ratio <- as.numeric(ang5$final_dry_g.x) / as.numeric(ang5$final_dry_g.y)
+ang5 <- ang5 %>%
+mutate(ratio = as.numeric(ang5$final_dry_g.x) / as.numeric(ang5$final_dry_g.y)) %>%
+  mutate(logratio = log(ang5$ratio + 0.1)) %>%
+ mutate(load.LAI = as.numeric(final_dry_g.x) / LAI)
 #ang5$date <- as.Date(ang5$date, format="%d-%b")
-ang5$logratio <- log(ang5$ratio + 0.1)
 
 ang5$non_zero <- ifelse(ang5$ratio > 0, 1, 0)
 
@@ -110,7 +117,7 @@ plot(ang5$site.depths.m ~ ang5$group.y)
 ```
 
 Figure 1C: Smithora load in edge v interior sites  
-```{r, echo=FALSE}
+```{r Figure 1C smithora load, echo=FALSE}
 smith.load <- ggplot(ang5, aes(x = group.y, y = ratio)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
@@ -126,9 +133,43 @@ smith.load <- ggplot(ang5, aes(x = group.y, y = ratio)) +
 ggsave("smith.load.ang.jpg", plot = smith.load, width = 3, height = 3)
 ```
 
+Figure A2a: Smithora load.LAI in edge v interior sites  
+```{r Figure A2a smithora load LAI, echo=FALSE}
+smith.load.LAI <- ggplot(ang5, aes(x = group.y, y = load.LAI)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = expression(paste("Smithora (g dwt) / Zostera LAI (", cm^2, ")"))) + 
+  theme_bw() + 
+  theme(panel.grid = element_blank()) + 
+  xlab(expression("Location")) + 
+  #geom_text(label = "C", x = 2.4, y = 4) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 0, size = 10))
+#smith.load
+ggsave("smith.loadLAI.ang.jpg", plot = smith.load.LAI, width = 3, height = 3)
+```
+
+Figure A2b
+```{r LAI by biomass}
+LAI_biomass <- ggplot(ang5, aes(x = final_dry_g.y, y = LAI)) + 
+  geom_point() +
+  scale_y_continuous(name = expression(paste("LAI (", cm^2, ")")), limits = c(0, 2500)) + 
+  scale_x_continuous(name = "Zostera dry weight (g)", limits = c(0, 5)) +
+  theme_bw() + 
+  theme(panel.grid = element_blank()) + 
+  geom_text(label = "LAI = 442.71*X + 99.13", x = 1.4, y = 2400, size = 3) +
+  theme(axis.title.y = element_text(vjust = -1, size = 12))
+
+ggsave("LAI_biomass.jpg", plot = LAI_biomass, width = 3, height = 3)
+
+modLAI <- lm(ang5$LAI~ang5$final_dry_g.y)
+summary(modLAI)
+anova(modLAI)
+```
+
 ## Analysis
 
-```{r}
+```{r spatial patterns hurdle model smithora load}
 # model selection for smithora load
 shapiro.test(ang5$logratio+0.01)
 hist(ang5$logratio)
@@ -173,6 +214,8 @@ model.sel(m2a, m2b, m2c, m2d, m2e, m2f, m2g, m2h)
 
 (gamma_coef <- exp(coef(m2c)$site[1:8, 1]))
 (exp(confint(m2)))
+
+#mean and se 
 
 #detach('package:nlme', unload = TRUE)
 

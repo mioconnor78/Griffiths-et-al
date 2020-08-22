@@ -16,6 +16,9 @@ library(stringr)
 library(MuMIn)
 library(knitr)
 library(captioner)
+library(vegan)
+library(viridis)
+library(ggpubr) # multi-plot visualizations
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
@@ -80,7 +83,7 @@ min.mean.sd.max <- function(x) {
 
 ## survey results for Z density
 
-```{r TABLE 4A survey shoot density models}
+```{r shoots by dry mass regression}
 plot(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
 mod1 <- lm(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
 mod2 <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
@@ -107,41 +110,47 @@ Z.jul.int <- coef(mavg)[1]*16 + coef(mavg)[4]*16
 ```
 
 FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
-
-```{r shoot density plot}
+## A) Zostera shoot density
+```{r Fig 2A shoot density plot}
 shoot.density <- ggplot(survey2_eg, aes(x = Zone, y = number.shoots.quadrat*16)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  geom_boxplot(size = 1, fill = "transparent") + 
-  scale_y_continuous(name = "Zostera Shoots (N/ m^2)") +
+  geom_boxplot(size = 0.75, fill = "transparent") + 
+  scale_y_continuous(name = expression(paste("Zostera Shoots (N/", m^2, ")")), limits = c(0, 200)) +
   theme_bw() + 
   theme(panel.grid = element_blank()) + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
-  xlab(expression("Zone")) + 
+  #xlab(expression("Zone")) + 
   #geom_text(label = "A", x = 2.4, y = 15) +
-  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = 2, size = 12))
+  #theme(axis.title.x = element_text(vjust = -1, size = 10)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
 
 shoot.density
 
-ggsave("shoot.density.jpg", plot = shoot.density, width = 6, height = 3)
+ggsave("shoot.density.jpg", plot = shoot.density, width = 5, height = 2)
 ```
 
 ## B) Zostera shoot dry weight
 ```{r Zostera dry weight figure}
 shoot.dwt <- ggplot(survey2_eg, aes(x = Zone, y = zostra.final.dry.macro.weight.grams*16)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Zostera shoot dry weight (g/m^2)") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent", lwd = 0.75) + 
+  scale_y_continuous(name = expression(paste("Zostera shoot weight (g/", m^2, ")")), limits = c(0, 400)) +
   facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   theme_bw() + 
+   theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   theme(panel.grid = element_blank()) + 
-  xlab(expression("Zone")) + 
+  #xlab(expression("Zone")) + 
   #geom_text(label = "A", x = 2.4, y = 30) +
-  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = 2, size = 12))
+  #theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
 
 shoot.dwt
-ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 6, height = 3)
+ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 5, height = 2)
 ```
 
 Zostera above ground dry weight
@@ -161,7 +170,7 @@ Zjune.int <- (coef(modc)[1] + coef(modc)[3] + coef(modc)[2])*16
 Zjul.int <- (coef(modc)[1] + coef(modc)[3]*2 + coef(modc)[2])*16
 ```
 
-B) Smithora load (dry weight)
+## C) Smithora load (dry weight)
 ```{r TABLE 4C Smithora load models}
 #hist(compare_edge2$total.dry.macro.weight)
 mod1 <- lm((smithora.dry.weight.grams/zostra.final.dry.macro.weight.grams) ~ site, data = survey2_eg)
@@ -187,24 +196,27 @@ Z.jul.int <- coef(mavg)[1]*16 + coef(mavg)[4]*16
 ```{r Smithora load plot}
 smithora <- ggplot(survey2_eg, aes(x = Zone, y = ratio)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = expression(paste(italic("Smithora"), " (g dry wt / g Zostera dry wt)")), limits = c(0, 0.5)) +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent", lwd = 0.75) + 
+  scale_y_continuous(name = expression(paste(italic("Smithora"), " (g / g Zostera)")), limits = c(0, 0.5)) +
   theme_bw() + 
+   theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   theme(panel.grid = element_blank()) + 
-  xlab(expression("Zone")) + 
+  #xlab(expression("Zone")) + 
   #geom_text(label = "B", x = 2.4, y = 0.5) +
-  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = 2, size = 12))
+  #theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
 
 smithora
 
-ggsave("smithora.jpg", plot = smithora, width = 6, height = 3)
+ggsave("smithora.jpg", plot = smithora, width = 5, height = 2)
 ```
 
-D) GRAZER ABUNDANCE
+## D) GRAZER ABUNDANCE
 
-```{r invertebrate data} 
+```{r invertebrate data processing} 
 #found i think the final grazer file in an email from coreen; using that here and cleaning it.
 # I can match the grazer data with the eelgrass data from the same plots!
 grazers[is.na(grazers)] <- 0
@@ -281,7 +293,25 @@ mod2 <- lm(gpgT ~ 1,  data = combined)
 anova(mod1, mod2)
 ```
 
+## Figure 2D: Grazer N / Zostera g
+```{r}
+grazer.zost <- ggplot(combined, aes(x = Zone.y, y = gpgG)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Grazers (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 14)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
 
+grazer.zost
+ggsave("grazer.zost.jpg", plot = grazer.zost, width = 5, height = 2.2)
+```
+
+## Figure A1: additional invert plots
 ```{r invert plots}
 #hist(log(combined$Abundance))
 grazerfigA <- ggplot(combined, aes(x = Zone.y, y = gpgT)) + 
@@ -298,18 +328,6 @@ grazerfigA <- ggplot(combined, aes(x = Zone.y, y = gpgT)) +
 
 grazerfigA
 ggsave("Inverts.jpg", plot = grazerfigA, width = 6, height = 2.5)
-
-grazerfigB <- ggplot(combined, aes(x = Zone.y, y = gpgG)) + 
-  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Grazers (N / g Zostera)") + #limits = c(0, 0.5)
-  theme_bw() + 
-  theme(panel.grid = element_blank()) +
-  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
-  xlab(expression("")) + 
-  #geom_text(label = "C", x = 2.4, y = 650) +
-  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
-  theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 grazerfigB
 ggsave("Grazers.jpg", plot = grazerfigB, width = 6, height = 2.5)
@@ -384,9 +402,9 @@ summary(mavCg)
 summary(modGab)
 ```
 
-
+## Figure: Smithora load / Grazer load
 ```{r grazers and smithora plot}
-grazersmith <- ggplot(combined, aes(x = gpg, y = ratio, color = Sample_mo)) + 
+grazersmith <- ggplot(combined, aes(x = gpgG, y = ratio, color = Sample_mo)) + 
   geom_point(size=3) +
   #geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   #stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
@@ -402,7 +420,8 @@ grazersmith <- ggplot(combined, aes(x = gpg, y = ratio, color = Sample_mo)) +
 grazersmith
 ```
 
-```{r TABLE 5 models for smithora load}
+```{r TABLE 5 models for smithora load - with zostera density and weight}
+gpg <- combined$gpgT
 moda <- lm(ratio ~ 1, data = combined)
 modb <- lm(ratio ~ 1 + Zone.y, data = combined)
 modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
@@ -420,6 +439,221 @@ modn <- lm(ratio ~ 1 + number.shoots.quadrat, data = combined)
 modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = combined)
 modp <- lm(ratio ~ 1 + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
 model.sel(moda, modb, modc, modd, mode, modf, modg, modh, modi, modj, modk, modl, modm, modn, modo, modp)
+```
+
+```{r TABLE 5 (not published) models for smithora load - with zostera weight}
+gpg <- combined$gpgG
+moda <- lm(ratio ~ 1, data = combined)
+modb <- lm(ratio ~ 1 + Zone.y, data = combined)
+modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
+modd <- lm(ratio ~ 1 + Zone.y*Sample_time.x, data = combined)
+mode <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg, data = combined)
+modf <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg + zostra.final.dry.macro.weight.grams, data = combined)
+modg <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg + zostra.final.dry.macro.weight.grams, data = combined)
+modh <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
+modi <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
+modj <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
+modk <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg, data = combined)
+modl <- lm(ratio ~ 1 + Zone.y + gpg, data = combined)
+modm <- lm(ratio ~ 1 + gpg, data = combined)
+modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = combined)
+modp <- lm(ratio ~ 1 + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
+model.sel(moda, modb, modc, modd, mode, modf, modg, modh, modi, modj, modk, modl, modm, modo, modp)
+```
+
+## Grazer diversity - July only
+```{r}
+## create a plot x species matrix
+inverts5 <- inverts[,-6]
+inverts6 <- inverts5[(inverts5$Sample_time == "July"),]
+inverts_July <- inverts6[,-(3:4)]
+inverts_July <- inverts_July[,-(1)]
+inverts_July <- as.data.frame(inverts_July, row.names(inverts_July$Sample_ID))
+inverts_Jcom <- dcast(inverts_July, Site ~ Species)
+
+#estimate relative abundance:
+Jcom.rel <-         
+  decostand(inverts_Jcom[,-(1)], method = "total")
+
+#calculate distance matrix
+Jcom_distmat <- 
+  vegdist(Jcom.rel, method = "bray")
+
+# Creating easy to view matrix and writing .csv
+Jcom_distmat <- 
+  as.matrix(Jcom_distmat, labels = T)
+write.csv(Jcom_distmat, "July_communities_distmat.csv")
+
+# create grouping data
+sites <- c("Wolf edge A", "wolf edge D", "wolf edge F", "Wolf inner A", "Wolf Inner C", "Wolf Inner D", "Wolf inner F")
+zones <- c("Edge", "Edge", "Edge", "Inner", "Inner","Inner","Inner")
+sitezones <- as.data.frame(cbind(sites, zones))
+
+# run ndms
+Jcom_NMS <-
+  metaMDS(Jcom_distmat,
+          distance = "bray",
+          k = 2,
+          maxit = 999, 
+          trymax = 500,
+          wascores = TRUE, 
+          points = sites)
+
+stressplot(Jcom_NMS)
+
+plot(Jcom_NMS, display = ("sites"), type = "n") 
+orditorp(Jcom_NMS, "sites") 
+
+pchvec <- c(17, 16)
+
+jpeg('JulyNMDS.jpg')
+
+plot(Jcom_NMS, type = "n")
+with(sitezones, 
+     points(Jcom_NMS,
+            display = "sites", 
+            col = "black",
+            pch = pchvec[zones]))
+dev.off()
+
+```
+
+## Grazer diversity - June only
+```{r}
+## create a plot x species matrix; this still has ASUs and Controls, i don't know what controls mean in this context so we should not use June data i guess. 
+inverts6 <- inverts5[(inverts5$Sample_time == "June"),]
+inverts_June <- inverts6[,-(3:4)]
+inverts_June <- inverts_June[,-(1)]
+inverts_June <- as.data.frame(inverts_June, row.names(inverts_June$Sample_ID))
+inverts_Jncom <- dcast(inverts_June, Site ~ Species)
+
+
+#https://rpubs.com/CPEL/NMDS
+#estimate relative abundance:
+Jncom.rel <-         
+  decostand(inverts_Jncom[,-(1)], method = "total")
+
+#calculate distance matrix
+Jncom_distmat <- 
+  vegdist(Jncom.rel, method = "bray")
+
+# Creating easy to view matrix and writing .csv
+Jncom_distmat <- 
+  as.matrix(Jncom_distmat, labels = T)
+write.csv(Jncom_distmat, "July_communities_distmat.csv")
+
+# create grouping data
+sites <- c(levels(inverts_June$Site))  
+zones <- c("Edge", "Edge", "Edge", "Inner", "Inner","Inner","Inner")
+sitezones <- as.data.frame(cbind(sites, zones))
+
+# run ndms
+Jcom_NMS <-
+  metaMDS(Jcom_distmat,
+          distance = "bray",
+          k = 2,
+          maxit = 999, 
+          trymax = 500,
+          wascores = TRUE, 
+          points = sites)
+
+stressplot(Jcom_NMS)
+
+plot(Jcom_NMS, display = ("sites"), type = "n") 
+orditorp(Jcom_NMS, "sites") 
+
+pchvec <- c(17, 16)
+
+jpeg('JulyNMDS.jpg')
+
+plot(Jcom_NMS, type = "n")
+with(sitezones, 
+     points(Jcom_NMS,
+            display = "sites", 
+            col = "black",
+            pch = pchvec[zones]))
+dev.off()
+
+```
+
+## Grazer diversity - all
+```{r}
+inverts_all <- inverts5[,-(3:4)]
+#inverts_all <- inverts_all[,-(1)]
+inverts_all <- as.data.frame(inverts_all, row.names(inverts_all$Sample_ID))
+inverts_Tcom <- dcast(inverts_all, Site ~ Species)
+
+
+Tcom.rel <-         
+  decostand(inverts_Tcom[,-(1)], method = "total")
+
+#calculate distance matrix
+Tcom_distmat <- 
+  vegdist(Tcom.rel, method = "bray")
+
+# Creating easy to view matrix and writing .csv
+Tcom_distmat <- 
+  as.matrix(Tcom_distmat, labels = T)
+write.csv(Tcom_distmat, "communities_distmat.csv")
+
+# create grouping data
+sites_oldnames <- c("july_-120_edge", "july_-120_inner", "july_-160_edge", "july_-40_inner", "july_-80_inner", "july_0_inner", "july_40_edge", "june_-120_edge", "june_-120_inner", "june_-40_edge", "june_-40_inner", "june_-80_edge", "june_-80_inner", "june_0_edge", "june_0_inner", "june_40_edge", "june_40_inner")
+sites_standardnames <- c("Edge D", "Inner E", "Edge A","Inner D",  "Edge C", "Inner A", "Edge F", "Edge D","Inner F", "Edge B",  "Inner B", "Edge C", "Inner C", "Edge E", "Inner A", "Edge B",  "Inner B") #i assumed here that the -80 inner, etc, referred to the same sites in June and July. I suspect this is incorrect... so maybe i won't proceed with this. 
+zones <- c("Edge", "Inner", "Edge","Inner","Inner","Inner", "Edge","Edge", "Inner", "Edge","Inner","Edge","Inner","Edge","Inner","Edge","Inner")
+month <- c("July", "July", "July","July", "July", "July","July", "June","June","June","June","June","June","June","June","June","June")
+sitezonesA <- as.data.frame(cbind(sites_oldnames, sites_standardnames, zones, month))
+
+# run ndms
+Tcom_NMS <-
+  metaMDS(Tcom_distmat,
+          distance = "bray",
+          k = 2,
+          maxit = 999, 
+          trymax = 500,
+          wascores = TRUE, 
+          points = sites_standardnames)
+
+stressplot(Tcom_NMS)
+
+plot(Tcom_NMS) 
+orditorp(Tcom_NMS, "sites") 
+
+pchvec <- c(17, 16)
+colvec <- c("gray49", "black")
+
+jpeg('allNMDS.jpg')
+
+plot(Tcom_NMS, type = "n")
+with(sitezonesA, 
+     points(Tcom_NMS,
+            display = "sites", 
+            col = colvec[month],
+            pch = pchvec[zones]))
+
+dev.off()
+
+#Create convex hulls that highlight point clusters based on grouping dataframe
+ordihull(
+  Tcom_NMS,
+  sitezonesA$zones,
+  display = "sites",
+  draw = c("polygon"),
+  col = NULL,
+  border = c("gray0", "gray0", "gray48", "gray48"),
+  lty = c(1, 2, 1, 2),
+  lwd = 1
+  )
+
+ordihull(
+  Tcom_NMS,
+  sitezonesA$month,
+  display = "sites",
+  draw = c("polygon"),
+  col = NULL,
+  border = c("gray0", "gray0", "gray48", "gray48"),
+  lty = c(1, 2, 1, 2),
+  lwd = 1
+  )
 ```
 
 
