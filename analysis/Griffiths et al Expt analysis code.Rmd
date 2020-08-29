@@ -31,7 +31,8 @@ grazertraits <- read.csv("../data/grazertraitsmaster.csv")
 #grazers <- read.csv("./data/Grazers_EdgeVSInterior_V1_Aug09_2017.csv")
 # in sept 2019 i dug through emails. i think we should use this grazer file: 
 grazers <- read.csv("../data/Grazers_EdgeVSInterior_2017.csv")
-grazer_eelgrass <- read.csv("../data/Grazers_Eelgrass_Data_EdgeVSInterior_2017.csv")
+eelgrass_preexpt_survey <- read.csv("../data/Grazers_Eelgrass_Data_EdgeVSInterior_2017.csv")
+grazers_coreen <- read.csv("../data/ASUdata.csv")
 grazer_taxa <- read.csv("../data/invert.taxa.csv")
 ```
 
@@ -54,7 +55,7 @@ compare_edge2$site[compare_edge$site == "choked_inner_wolf"] <- "Interior"
 ```
 
 ```{r survey data}
-survey2_eg <- grazer_eelgrass %>%
+survey2_eg <- eelgrass_preexpt_survey %>%
   select(-quadrat.location)%>%
   select(-date)
 
@@ -70,6 +71,10 @@ survey2_eg$Sample_mo[(survey2_eg$Sample_mo)=="2"] <- "July"
 
 survey2_eg <- survey2_eg %>% 
   mutate(ratio = as.numeric(smithora.dry.weight.grams)/zostra.final.dry.macro.weight.grams)
+
+survey2_eg_July <- survey2_eg %>% 
+  mutate(ratio = as.numeric(smithora.dry.weight.grams)/zostra.final.dry.macro.weight.grams) %>%
+  filter(Sample_mo == "July")
 ```
 
 ```{r mean mid sd max function}
@@ -83,8 +88,22 @@ min.mean.sd.max <- function(x) {
 
 ## survey results for Z density
 
-```{r shoots by dry mass regression}
+```{r Fig A2C shoots by dry mass regression}
 plot(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
+
+shoots.drywt <- ggplot(survey2_eg, aes(x = zostra.final.dry.macro.weight.grams, y = number.shoots.quadrat)) + 
+  geom_point(aes(x = zostra.final.dry.macro.weight.grams, y = number.shoots.quadrat), size = 3) +
+  scale_y_continuous(name = expression(paste("Zostera Shoots (N/", sample, ")")), limits = c(0, 15)) +
+  scale_x_continuous(name = expression("Zostera shoot weight (g/sample)"), limits = c(0, 30)) +
+  theme_bw() + 
+  theme(panel.grid = element_blank()) + 
+  xlab(expression("Zone")) 
+  #theme(axis.title.x = element_text(vjust = -1, size = 11)) + 
+  #theme(axis.title.y = element_text(vjust = 2, size = 11))
+
+shoots.drywt
+ggsave("shoots.drywt.jpg", plot = shoots.drywt, width = 3, height = 3)
+
 mod1 <- lm(number.shoots.quadrat ~ zostra.final.dry.macro.weight.grams, data = survey2_eg)
 mod2 <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
 anova(mod1, mod2)
@@ -109,8 +128,8 @@ Z.jul.int <- coef(mavg)[1]*16 + coef(mavg)[4]*16
 
 ```
 
-FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
-## A) Zostera shoot density
+#FIGURE 2: ZOSTERA, SMITHORA and GRAZER ABUNDANCE at transplant sites before experiment
+## 2A) Zostera shoot density
 ```{r Fig 2A shoot density plot}
 shoot.density <- ggplot(survey2_eg, aes(x = Zone, y = number.shoots.quadrat*16)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
@@ -132,7 +151,7 @@ shoot.density
 ggsave("shoot.density.jpg", plot = shoot.density, width = 5, height = 2)
 ```
 
-## B) Zostera shoot dry weight
+## 2B) Zostera shoot dry weight
 ```{r Zostera dry weight figure}
 shoot.dwt <- ggplot(survey2_eg, aes(x = Zone, y = zostra.final.dry.macro.weight.grams*16)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
@@ -153,7 +172,7 @@ shoot.dwt
 ggsave("shoot.dwt.jpg", plot = shoot.dwt, width = 5, height = 2)
 ```
 
-Zostera above ground dry weight
+## Zostera above ground dry weight
 ```{r TABLE 4B Zostera dry weight models}
 #hist(compare_edge2$total.dry.macro.weight)
 hist(survey2_eg$zostra.final.dry.macro.weight.grams)
@@ -170,7 +189,7 @@ Zjune.int <- (coef(modc)[1] + coef(modc)[3] + coef(modc)[2])*16
 Zjul.int <- (coef(modc)[1] + coef(modc)[3]*2 + coef(modc)[2])*16
 ```
 
-## C) Smithora load (dry weight)
+## 2C) Smithora load (dry weight)
 ```{r TABLE 4C Smithora load models}
 #hist(compare_edge2$total.dry.macro.weight)
 mod1 <- lm((smithora.dry.weight.grams/zostra.final.dry.macro.weight.grams) ~ site, data = survey2_eg)
@@ -199,14 +218,14 @@ smithora <- ggplot(survey2_eg, aes(x = Zone, y = ratio)) +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent", lwd = 0.75) + 
   scale_y_continuous(name = expression(paste(italic("Smithora"), " (g / g Zostera)")), limits = c(0, 0.5)) +
   theme_bw() + 
-   theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
+   #theme(axis.title.x=element_blank(),
+    #    axis.text.x=element_blank(),
+     #   axis.ticks.x=element_blank()) +
   facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   theme(panel.grid = element_blank()) + 
-  #xlab(expression("Zone")) + 
+  xlab(expression("Zone")) + 
   #geom_text(label = "B", x = 2.4, y = 0.5) +
-  #theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 10))
 
 smithora
@@ -214,9 +233,126 @@ smithora
 ggsave("smithora.jpg", plot = smithora, width = 5, height = 2)
 ```
 
-## D) GRAZER ABUNDANCE
+### Table 5
+```{r TABLE 5 models for smithora load - with zostera density and weight}
+moda <- lm(ratio ~ 1, data = survey2_eg)
+modb <- lm(ratio ~ 1 + Zone, data = survey2_eg)
+modc <- lm(ratio ~ 1 + Zone + Sample_time, data = survey2_eg)
+modd <- lm(ratio ~ 1 + Zone*Sample_time, data = survey2_eg)
+modf <- lm(ratio ~ 1 + Zone*Sample_time + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = survey2_eg)
+modh <- lm(ratio ~ 1 + Zone + Sample_time + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = survey2_eg)
+modi <- lm(ratio ~ 1 + Zone + Sample_time + zostra.final.dry.macro.weight.grams, data = survey2_eg)
+modj <- lm(ratio ~ 1 + Zone + Sample_time + number.shoots.quadrat, data = survey2_eg)
+modn <- lm(ratio ~ 1 + number.shoots.quadrat, data = survey2_eg)
+modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = survey2_eg)
+model.sel(moda, modb, modc, modd, modf, modh, modi, modj, modn, modo)
+```
 
-```{r invertebrate data processing} 
+```{r TABLE 5 (not published) models for smithora load - with zostera weight}
+gpg <- combined$gpgG
+moda <- lm(ratio ~ 1, data = combined)
+modb <- lm(ratio ~ 1 + Zone.y, data = combined)
+modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
+modd <- lm(ratio ~ 1 + Zone.y*Sample_time.x, data = combined)
+mode <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg, data = combined)
+modf <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg + zostra.final.dry.macro.weight.grams, data = combined)
+modg <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg + zostra.final.dry.macro.weight.grams, data = combined)
+modh <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
+modi <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
+modj <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
+modk <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg, data = combined)
+modl <- lm(ratio ~ 1 + Zone.y + gpg, data = combined)
+modm <- lm(ratio ~ 1 + gpg, data = combined)
+modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = combined)
+modp <- lm(ratio ~ 1 + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
+model.sel(moda, modb, modc, modd, mode, modf, modg, modh, modi, modj, modk, modl, modm, modo, modp)
+```
+
+
+
+## 2D) GRAZER ABUNDANCE
+### Coreen's invert data - organize and combine
+```{r }
+grazers_coreen1 <- grazers_coreen %>%
+  filter(ASU.reference == "eelgrass") %>%
+  select(-transect.location)%>%
+  select(-days.since.start) %>%
+  select(-sieve.size) %>%
+  select(-ASU.reference) %>%
+  select(-date)
+
+grazers_coreen1 <- grazers_coreen1[,-(45:61)]
+
+gr_coreen2 <- melt(grazers_coreen1, id = c(1,2))
+names(gr_coreen2) <- c("Zone","Site", "Species", "Abundance")
+gr_coreen3<- ddply(gr_coreen2, .(Zone, Site, Species), summarise, sum(Abundance))
+gr_coreen3$N <- gr_coreen3[,4]
+inverts <- gr_coreen3
+
+inverts2 <- merge(inverts, grazer_taxa, by.x = "Species", by.y = "taxon.name")
+inverts2 <- inverts2[,-4]
+inverts_table <- ddply(inverts, .(Site, Zone), summarise, sum(N))
+names(inverts_table) <- c("Site", "Zone","inverts_N")
+
+grazers4 <- inverts2 %>%
+  filter(grazer == "y")
+
+grazers_table <- ddply(grazers4, .(Site, Zone), summarise, sum(N))
+names(grazers_table) <- c( "Site", "Zone","grazers_N")
+
+grazers_gastropod <- grazers4 %>%
+  filter(phylum == "mollusca")
+gastropod_table <- ddply(grazers_gastropod, .(Site, Zone), summarise, sum(N))
+names(gastropod_table) <- c("Site", "Zone","gastro_N")
+
+grazers_crustacean <- grazers4 %>%
+  filter(phylum == "arthropoda")
+crustacean_table <- ddply(grazers_crustacean, .(Site, Zone), summarise, sum(N))
+names(crustacean_table) <- c("Site", "Zone","crust_N")
+
+space_comp <- inverts2 %>%
+  filter(Species == "mytilus", phylum == "bryozoa")
+
+inverts_table <- ddply(inverts, .(Site, Zone), summarise, sum(N))
+names(inverts_table) <- c("Site", "Zone","inverts_N")
+```
+
+### combine invert data with shoot data - Coreen's data
+```{r}
+combined <- merge(survey2_eg_July, inverts_table, by.x = c("Zone","sample.id"), by.y = c("Zone", "Site"), no.dups = TRUE)
+
+combined <- combined %>% 
+  mutate(gpgT = inverts_N/zostra.final.dry.macro.weight.grams)
+combined2 <- merge(combined, grazers_table, by.x = c("Zone","sample.id"), by.y = c("Zone", "Site"), no.dups = TRUE)
+combined3 <- merge(combined2, gastropod_table, by.x = c("Zone","sample.id"), by.y = c("Zone", "Site"), no.dups = TRUE, suffixes = c(".c", ".g"))
+combined4 <- merge(combined3, crustacean_table, by.x = c("Zone","sample.id"), by.y = c("Zone", "Site"), no.dups = TRUE, suffixes = c(".t", ".cr"))
+
+combined <- combined4 %>% 
+  mutate(gpgT = inverts_N/zostra.final.dry.macro.weight.grams) %>%
+  mutate(gpgG = grazers_N/zostra.final.dry.macro.weight.grams) %>%
+  mutate(gpgGa = gastro_N/zostra.final.dry.macro.weight.grams) %>%
+  mutate(gpgC = crust_N/zostra.final.dry.macro.weight.grams)
+```
+
+```{r total grazers coreen's data - July only}
+invertsC <- ggplot(combined, aes(x = Zone, y = gpgT)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Invertebrates (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
+
+invertsC
+ggsave("InvertspgC.jpg", plot = invertsC, width = 2.5, height = 2)
+```
+
+### invertebrate data processing - Gwen's data, no longer used
+```{r} 
 #found i think the final grazer file in an email from coreen; using that here and cleaning it.
 # I can match the grazer data with the eelgrass data from the same plots!
 grazers[is.na(grazers)] <- 0
@@ -261,7 +397,7 @@ space_comp <- inverts2 %>%
 
 ```
 
-```{r combine invert data with shoot data}
+```{r combine invert data with shoot data - Gwen's data}
 # ok now merge grazer file with the eelgrass file
 combined <- merge(survey2_eg, inverts_table, by.x = "month_replicate_meadow.position", by.y = "Sample_ID", no.dups = TRUE)
 combined2 <- merge(combined, grazers_table, by.x = "month_replicate_meadow.position", by.y = "Sample_ID", no.dups = TRUE)
@@ -283,9 +419,6 @@ mod2 <- lm(number.shoots.quadrat ~ 1, data = survey2_eg)
 anova(mod1, mod2)
 
 plot(gpgT ~ zostra.final.dry.macro.weight.grams, data = combined)
-mod1 <- lm(gpgT ~ zostra.final.dry.macro.weight.grams,  data = combined)
-mod2 <- lm(gpgT ~ 1,  data = combined)
-anova(mod1, mod2)
 
 plot(gpgT ~ number.shoots.quadrat, data = combined)
 mod1 <- lm(gpgT ~ number.shoots.quadrat,  data = combined)
@@ -293,78 +426,87 @@ mod2 <- lm(gpgT ~ 1,  data = combined)
 anova(mod1, mod2)
 ```
 
-## Figure 2D: Grazer N / Zostera g
-```{r}
-grazer.zost <- ggplot(combined, aes(x = Zone.y, y = gpgG)) + 
-  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  scale_y_continuous(name = "Grazers (N / g Zostera)") + #limits = c(0, 0.5)
-  theme_bw() + 
-  theme(panel.grid = element_blank()) +
-  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
-  xlab(expression("Zone")) + 
-  #geom_text(label = "C", x = 2.4, y = 650) +
-  theme(axis.title.x = element_text(vjust = -1, size = 14)) + 
-  theme(axis.title.y = element_text(vjust = 2, size = 10))
 
-grazer.zost
-ggsave("grazer.zost.jpg", plot = grazer.zost, width = 5, height = 2.2)
+### invert data analysis - figure legend 2, Figure 2A, table 4
+```{r}
+mod1 <- lm(gpgT ~ zostra.final.dry.macro.weight.grams,  data = combined)
+mod2 <- lm(gpgT ~ 1,  data = combined)
+anova(mod1, mod2)
+
+mod1a <- lm(gpgT ~ Zone,  data = combined)
+mod2a <- lm(gpgT ~ 1,  data = combined)
+anova(mod1a, mod2a)
+summary(mod2a)
+model.sel(mod1a, mod2a)
+
+mod1b <- lm(gpgG ~ Zone,  data = combined)
+mod2b <- lm(gpgG ~ 1,  data = combined)
+anova(mod1b, mod2b)
+summary(mod1b)
+model.sel(mod1b, mod2b)
+
+mod1c <- lm(gpgGa ~ Zone,  data = combined)
+mod2c <- lm(gpgGa ~ 1,  data = combined)
+anova(mod1c, mod2c)
+summary(mod1c)
+
+mod1d <- lm(gpgC ~ Zone,  data = combined)
+mod2d <- lm(gpgC ~ 1,  data = combined)
+anova(mod1d, mod2d)
+summary(mod1d)
+model.sel(mod1d, mod2d)
 ```
 
-## Figure A1: additional invert plots
+## Figure A1: additional invert plots and stats
 ```{r invert plots}
 #hist(log(combined$Abundance))
-grazerfigA <- ggplot(combined, aes(x = Zone.y, y = gpgT)) + 
+FigA2grazers <- ggplot(combined, aes(x = Zone, y = gpgT)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
   scale_y_continuous(name = "Invertebrates (N / g Zostera)") + #limits = c(0, 0.5)
   theme_bw() + 
   theme(panel.grid = element_blank()) +
-  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   xlab(expression("")) + 
   #geom_text(label = "C", x = 2.4, y = 650) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 grazerfigA
-ggsave("Inverts.jpg", plot = grazerfigA, width = 6, height = 2.5)
+ggsave("FigA2Grazers.jpg", plot = grazerfigA, width = 6, height = 2.5)
 
-grazerfigB
-ggsave("Grazers.jpg", plot = grazerfigB, width = 6, height = 2.5)
-
-
-grazerfigC <- ggplot(combined, aes(x = Zone.y, y = gpgGa)) + 
+grazerfigB <- ggplot(combined, aes(x = Zone, y = gpgGa)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
   scale_y_continuous(name = "Gastropod Grazers (N / g Zostera)") + #limits = c(0, 0.5)
   theme_bw() + 
   theme(panel.grid = element_blank()) +
-  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   xlab(expression("")) + 
   #geom_text(label = "C", x = 2.4, y = 650) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 12))
 
-grazerfigC
+grazerfigB
 ggsave("Gastropods.jpg", plot = grazerfigC, width = 6, height = 2.5)
 
-grazerfigD <- ggplot(combined, aes(x = Zone.y, y = gpgC)) + 
+grazerfigC <- ggplot(combined, aes(x = Zone, y = gpgC)) + 
   geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
   stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
   scale_y_continuous(name = "Crustaceans Grazers (N / g Zostera)") + #limits = c(0, 0.5)
   theme_bw() + 
   theme(panel.grid = element_blank()) +
-  facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   xlab(expression("Zone")) + 
   #geom_text(label = "C", x = 2.4, y = 650) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 12))
 
-grazerfigD
+grazerfigC
 ggsave("Crustaceans.jpg", plot = grazerfigD, width = 6, height = 2.5)
 ```
 
-```{r TABLE 4D invert models}
+```{r TABLE 4D invert models - Gwen's data}
 moda <- lm(gpgT ~ 1, data = combined)
 modb <- lm(gpgT ~ 1 + Zone.y, data = combined)
 modc <- lm(gpgT ~ 1 + Zone.y + Sample_time.x, data = combined)
@@ -402,64 +544,183 @@ summary(mavCg)
 summary(modGab)
 ```
 
-## Figure: Smithora load / Grazer load
+
+
+## Figure 2D: Grazer N / Zostera g
+```{r}
+grazer.zost <- ggplot(combined, aes(x = Zone, y = gpgG)) + 
+  geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
+  stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
+  scale_y_continuous(name = "Grazers (N / g Zostera)") + #limits = c(0, 0.5)
+  theme_bw() + 
+  theme(panel.grid = element_blank()) +
+  #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
+  xlab(expression("Zone")) + 
+  #geom_text(label = "C", x = 2.4, y = 650) +
+  theme(axis.title.x = element_text(vjust = -1, size = 14)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
+
+grazer.zost
+ggsave("grazer.zost.jpg", plot = grazer.zost, width = 5, height = 2.2)
+
+#analysis
+
+```
+
+
+## 2E) Grazer diveristy - Coreen's data
+```{r}
+## create a plot x species matrix
+inverts5 <- inverts[,-4]
+inverts6 <- inverts5 %>%
+  mutate(sample_ID = paste(Zone, Site)) %>%
+  select(-Zone) %>%
+  select(-Site)
+
+inverts_7 <- as.data.frame(inverts6, row.names(inverts6$sample_ID))
+#inverts_com <- inverts_7[,-3]
+
+inverts_Jcom <- dcast(inverts_7, sample_ID ~ Species, value.var = "N")
+
+#estimate relative abundance:
+Jcom.rel <-         
+  decostand(inverts_Jcom[,-(1)], method = "total")
+
+#calculate distance matrix
+Jcom_distmat <- 
+  vegdist(Jcom.rel, method = "bray")
+
+# Creating easy to view matrix and writing .csv
+Jcom_distmat <- 
+  as.matrix(Jcom_distmat, labels = T)
+write.csv(Jcom_distmat, "July_communities_distmat.csv")
+
+# create grouping data
+sites <- c("edge a", "edge b", "edge c", "edge d", "edge e", "edge f", "inner a", "inner b", "inner c", "inner d", "inner e", "inner f")
+zones <- c("Edge", "Edge", "Edge", "Edge", "Edge", "Edge", "Inner", "Inner","Inner","Inner",  "Inner", "Inner")
+sitezones <- as.data.frame(cbind(sites, zones))
+
+# run ndms
+Jcom_NMS <-
+  metaMDS(Jcom_distmat,
+          distance = "bray",
+          k = 2,
+          maxit = 999, 
+          trymax = 500,
+          wascores = TRUE, 
+          points = sites)
+```
+
+###grazer diversity ggplot
+```{r}
+# plot it on ggplot
+data.scores <- as.data.frame(scores(Jcom_NMS))
+data.scores$site <- rownames(data.scores)
+data.scores$grp <- zones
+
+div.plot <- ggplot(data = data.scores) +
+  stat_ellipse(aes(x=NMDS1, y = NMDS2, group = zones), level = 0.50) +
+  geom_point(aes(x=NMDS1, y=NMDS2, shape = zones, colour = zones), size = 2) +
+  scale_colour_manual(values=c("black", "gray50"),
+                      name="Zone:",
+                    breaks=c("Edge", "Inner"),
+                    labels=c("edge", "interior")) +
+  scale_shape_manual(values=c(16, 17),
+                     name="Zone:",
+                    breaks=c("Edge", "Inner"),
+                    labels=c("edge", "interior")) +
+  theme_bw() + 
+  theme(panel.grid = element_blank(),
+    legend.title = element_text(size=10), 
+    legend.text = element_text(size=9),
+    legend.position="bottom") +
+  theme(axis.title.x = element_text(vjust = -1, size = 10)) + 
+  theme(axis.title.y = element_text(vjust = 2, size = 10))
+
+div.plot
+ggsave("div.plot.jpg", plot = div.plot, width = 2.5, height = 3)
+```
+## adonis
+```{r}
+adon.results <- adonis(Jcom_distmat ~ sitezones$zones, permutations = 999, method = "bray")
+print(adon.results)
+```
+
+### nmds base plot - not using anymore
+```{r}
+stressplot(Jcom_NMS)
+
+plot(Jcom_NMS, display = ("sites"), type = "n") 
+orditorp(Jcom_NMS, "sites") 
+
+pchvec <- c(17, 16)
+
+jpeg('JulyNMDS.jpg')
+plot(Jcom_NMS, display = ("sites"), type = "n")
+with(sitezones, 
+     points(Jcom_NMS,
+            display = "sites", 
+            col = "black",
+            pch = pchvec[zones]))
+
+ordihull(
+  Jcom_NMS,
+  sitezones$zones,
+  display = "sites",
+  draw = c("polygon"),
+  col = NULL,
+  border = c("gray0", "gray48"),
+  lty = c(1, 2),
+  lwd = 1
+  )
+
+scrs <-
+  scores(Jcom_NMS, display = "sites")
+cent <-
+  aggregate(scrs ~ zones, data = sitezones, FUN = "mean")
+names(cent) [-1] <- colnames(scrs)
+points(cent [,-1],
+       pch = c( 8 , 8),
+       col = c("gray0", "gray48"),
+       bg = c("black"),
+       lwd = 2.0,
+       cex = 1.0 # Plots centroids as points on ordination
+       )
+
+dev.off()
+
+spp_scrs <- sppscores(Jcom_NMS) <- Jcom.rel
+plot(Jcom_NMS, "sites")
+plot(Jcom_NMS, "species") 
+orditorp(Jcom_NMS, "species")
+```
+
+### Old plots and analyses with Gwen's data
+
+## Figure: Smithora load / Grazer load - not currently using 
 ```{r grazers and smithora plot}
-grazersmith <- ggplot(combined, aes(x = gpgG, y = ratio, color = Sample_mo)) + 
+grazersmith <- ggplot(combined, aes(x = gpgG, y = ratio)) + #color = Sample_mo
   geom_point(size=3) +
-  #geom_jitter(position = position_jitter(width=.2), size=3, colour = "gray60") +
-  #stat_summary(fun.data = min.mean.sd.max, geom = "boxplot", fill = "transparent") + 
-  #scale_y_continuous(name = "Epifaunal Grazer Density (N / g Zostera)") + #limits = c(0, 0.5)
   theme_bw() + 
   theme(panel.grid = element_blank()) +
   #facet_grid( ~ fct_rev(Sample_mo), scale = "free") +
   xlab(expression("grazers / g Zostera")) + 
+  ylab(expression("Smithora g / g Zostera")) + 
   #geom_text(label = "C", x = 2.4, y = 650) +
   theme(axis.title.x = element_text(vjust = -1, size = 12)) + 
   theme(axis.title.y = element_text(vjust = 2, size = 12))
 
 grazersmith
+ggsave("Grazers_smith.jpg", plot = grazersmith, width = 3, height = 3)
+
+mod1 <- lm(combined$ratio ~ combined$gpgG)
+mod2 <- lm(combined$ratio ~ 1)
+model.sel(mod1, mod2)
+anova(mod1)
+summary(mod1)
 ```
 
-```{r TABLE 5 models for smithora load - with zostera density and weight}
-gpg <- combined$gpgT
-moda <- lm(ratio ~ 1, data = combined)
-modb <- lm(ratio ~ 1 + Zone.y, data = combined)
-modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
-modd <- lm(ratio ~ 1 + Zone.y*Sample_time.x, data = combined)
-mode <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg, data = combined)
-modf <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
-modg <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
-modh <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
-modi <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
-modj <- lm(ratio ~ 1 + Zone.y + Sample_time.x + number.shoots.quadrat, data = combined)
-modk <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg, data = combined)
-modl <- lm(ratio ~ 1 + Zone.y + gpg, data = combined)
-modm <- lm(ratio ~ 1 + gpg, data = combined)
-modn <- lm(ratio ~ 1 + number.shoots.quadrat, data = combined)
-modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = combined)
-modp <- lm(ratio ~ 1 + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
-model.sel(moda, modb, modc, modd, mode, modf, modg, modh, modi, modj, modk, modl, modm, modn, modo, modp)
-```
 
-```{r TABLE 5 (not published) models for smithora load - with zostera weight}
-gpg <- combined$gpgG
-moda <- lm(ratio ~ 1, data = combined)
-modb <- lm(ratio ~ 1 + Zone.y, data = combined)
-modc <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
-modd <- lm(ratio ~ 1 + Zone.y*Sample_time.x, data = combined)
-mode <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg, data = combined)
-modf <- lm(ratio ~ 1 + Zone.y*Sample_time.x + gpg + zostra.final.dry.macro.weight.grams, data = combined)
-modg <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg + zostra.final.dry.macro.weight.grams, data = combined)
-modh <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
-modi <- lm(ratio ~ 1 + Zone.y + Sample_time.x + zostra.final.dry.macro.weight.grams, data = combined)
-modj <- lm(ratio ~ 1 + Zone.y + Sample_time.x, data = combined)
-modk <- lm(ratio ~ 1 + Zone.y + Sample_time.x + gpg, data = combined)
-modl <- lm(ratio ~ 1 + Zone.y + gpg, data = combined)
-modm <- lm(ratio ~ 1 + gpg, data = combined)
-modo <- lm(ratio ~ 1 + zostra.final.dry.macro.weight.grams, data = combined)
-modp <- lm(ratio ~ 1 + gpg + zostra.final.dry.macro.weight.grams + number.shoots.quadrat, data = combined)
-model.sel(moda, modb, modc, modd, mode, modf, modg, modh, modi, modj, modk, modl, modm, modo, modp)
-```
 
 ## Grazer diversity - July only
 ```{r}
